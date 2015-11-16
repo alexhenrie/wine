@@ -3410,7 +3410,7 @@ msgid ""
 "Usernames and other information you have entered into forms."
 msgstr ""
 "Dades de formulari\n"
-"Noms d'usuari i altra informació que hàgeu introduït en formularis."
+"Noms d'usuari i altra informació que hàgiu introduït en formularis."
 
 #: inetcpl.rc:79
 msgid ""
@@ -3418,7 +3418,7 @@ msgid ""
 "Saved passwords you have entered into forms."
 msgstr ""
 "Contrasenyes\n"
-"Contrasenyes desades que hàgeu introduït en formularis."
+"Contrasenyes desades que hàgiu introduït en formularis."
 
 #: inetcpl.rc:82 progman.rc:67
 msgid "Delete"
