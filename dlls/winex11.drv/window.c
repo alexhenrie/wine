@@ -110,7 +110,7 @@ static void remove_startup_notification(Display *display, Window window)
 {
     static LONG startup_notification_removed = 0;
     char id[1024];
-    char message[1024];
+    char message[4096];
     int i;
     int pos;
     XEvent xevent;
@@ -126,9 +126,8 @@ static void remove_startup_notification(Display *display, Window window)
 
     if ((src = strstr( id, "_TIME" ))) update_user_time( atol( src + 5 ));
 
-    pos = snprintf(message, sizeof(message), "remove: ID=");
-    message[pos++] = '"';
-    for (i = 0; id[i] && pos < sizeof(message) - 2; i++)
+    pos = sprintf(message, "remove: ID=\"");
+    for (i = 0; id[i]; i++)
     {
         if (id[i] == '"' || id[i] == '\\')
             message[pos++] = '\\';
@@ -144,15 +143,13 @@ static void remove_startup_notification(Display *display, Window window)
     xevent.xclient.format = 8;
 
     src = message;
-    srclen = strlen(src) + 1;
+    srclen = pos;
 
     while (srclen > 0)
     {
-        int msglen = srclen;
-        if (msglen > 20)
-            msglen = 20;
-        memset(&xevent.xclient.data.b[0], 0, 20);
-        memcpy(&xevent.xclient.data.b[0], src, msglen);
+        int msglen = min(srclen, sizeof(xevent.xclient.data.b));
+        memset(xevent.xclient.data.b, 0, sizeof(xevent.xclient.data.b));
+        memcpy(xevent.xclient.data.b, src, msglen);
         src += msglen;
         srclen -= msglen;
 
