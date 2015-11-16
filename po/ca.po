@@ -2447,7 +2447,7 @@ msgstr "No s'ha pogut verificar totes les finalitats d'aquest certificat."
 
 #: cryptui.rc:37
 msgid "This certificate is intended for the following purposes:"
-msgstr "Aquest certificat es destina per als finalitats següents:"
+msgstr "Aquest certificat es destina a les finalitats següents:"
 
 #: cryptui.rc:38
 msgid "Issued to: "
@@ -3402,7 +3402,7 @@ msgid ""
 "List of websites you have accessed."
 msgstr ""
 "Historial\n"
-"Llista de llocs web al quals heu accedit."
+"Llista de llocs web als quals heu accedit."
 
 #: inetcpl.rc:77
 msgid ""
@@ -3410,7 +3410,7 @@ msgid ""
 "Usernames and other information you have entered into forms."
 msgstr ""
 "Dades de formulari\n"
-"Noms d'usuari i altra informació que hàgeu introduït en formularis."
+"Noms d'usuari i altra informació que hàgiu introduït en formularis."
 
 #: inetcpl.rc:79
 msgid ""
@@ -3418,7 +3418,7 @@ msgid ""
 "Saved passwords you have entered into forms."
 msgstr ""
 "Contrasenyes\n"
-"Contrasenyes desades que hàgeu introduït en formularis."
+"Contrasenyes desades que hàgiu introduït en formularis."
 
 #: inetcpl.rc:82 progman.rc:67
 msgid "Delete"
@@ -3934,7 +3934,7 @@ msgstr "Hi ha massa sessions de xarxa.\n"
 
 #: winerror.mc:316
 msgid "Sharing paused.\n"
-msgstr "S'ha pausat la compartició.\n"
+msgstr "Compartició en pausa.\n"
 
 #: winerror.mc:321
 msgid "Request not accepted.\n"
@@ -3942,7 +3942,7 @@ msgstr "No s'ha acceptat la sol·licitud.\n"
 
 #: winerror.mc:326
 msgid "Redirector paused.\n"
-msgstr "S'ha pausat el redirector.\n"
+msgstr "Redirector en pausa.\n"
 
 #: winerror.mc:331
 msgid "File exists.\n"
@@ -4814,7 +4814,7 @@ msgstr "Els registres de disquet són inconsistents.\n"
 
 #: winerror.mc:1426
 msgid "Hard disk recalibrate failed.\n"
-msgstr "La recalibració del disc dur ha fallat.\n"
+msgstr "El recalibratge del disc dur ha fallat.\n"
 
 #: winerror.mc:1431
 msgid "Hard disk operation failed.\n"
@@ -6758,11 +6758,11 @@ msgstr "&Atributs:"
 
 #: mshtml.rc:39
 msgid "Hyperlink"
-msgstr "Hiperenllaç"
+msgstr "Enllaç"
 
 #: mshtml.rc:42
 msgid "Hyperlink Information"
-msgstr "Informació d'hiperenllaç"
+msgstr "Informació d'enllaç"
 
 #: mshtml.rc:43 winecfg.rc:245
 msgid "&Type:"
@@ -7307,7 +7307,7 @@ msgstr "enfocable"
 #: oleacc.rc:119
 msgctxt "object state"
 msgid "selectable"
-msgstr "sel·lecionable"
+msgstr "seleccionable"
 
 #: oleacc.rc:120
 msgctxt "object state"
@@ -9746,7 +9746,7 @@ msgstr ""
 "L'ordre GOTO transfereix l'execució a una altra declaració en un fitxer\n"
 "batch.\n"
 "\n"
-"L'etiqueta que és la destinació d'un GOTO pot ser de fins 255 caràcters de\n"
+"L'etiqueta que és la destinació d'un GOTO pot ser de fins a 255 caràcters de\n"
 "longitud però no pot incloure espais (això és diferent d'altres sistemes\n"
 "operatius). Si dos o més etiquetes idèntiques existeixen en un fitxer\n"
 "batch, el primer sempre s'executarà. Intentar fer GOTO a una etiqueta no\n"
@@ -10011,7 +10011,7 @@ msgstr ""
 "start [opcions] nom_de_fitxer_de_document\n"
 "\n"
 "Opcions:\n"
-"\"títol\"           Especifica el títol de les finistres filles.\n"
+"\"títol\"           Especifica el títol de les finestres filles.\n"
 "/d directori      Inicia el programa en el directori especificat.\n"
 "/b                No creïs una consola nova per al programa.\n"
 "/i                Inicia el programa amb variables d'entorn fresques.\n"
@@ -10028,7 +10028,7 @@ msgstr ""
 "                  especificada.\n"
 "/wait             Espera que el programa iniciat termini, llavors surt amb\n"
 "                  el seu codi de sortida.\n"
-"/unix             Uitilitza un nom de fitxer d'Unix i inicia el fitxer com\n"
+"/unix             Utilitza un nom de fitxer d'Unix i inicia el fitxer com\n"
 "                  el Windows Explorer.\n"
 "/ProgIDOpen       Obre un document utilitzant la progID especificada.\n"
 "/?                Mostra aquesta ajuda i surt.\n"
@@ -10097,7 +10097,7 @@ msgstr ""
 "SETLOCAL comença la localització de canvis en l'entorn en un fitxer batch.\n"
 "\n"
 "Els canvis d'entorn fets després d'un SETLOCAL són locals al fitxer batch,\n"
-"i es conserven fins que la propera ENDLOCAL es trobi (o al final del\n"
+"i es conserven fins que es trobi la següent ENDLOCAL (o al final del\n"
 "fitxer, el que passi primer), al qual punt la configuració de l'entorn\n"
 "anterior es restaura.\n"
 
@@ -12153,7 +12153,7 @@ msgstr "Error: No es pot terminar el procés \"%1\".\n"
 
 #: taskkill.rc:43
 msgid "Error: Process self-termination is not permitted.\n"
-msgstr "Error: No es permet l'auto-terminació de procés.\n"
+msgstr "Error: No es permet l'autoterminació de procés.\n"
 
 #: taskmgr.rc:37 taskmgr.rc:108
 msgid "&New Task (Run...)"
@@ -13422,7 +13422,7 @@ msgid ""
 "Changing the load order of this library is not recommended.\n"
 "Are you sure you want to do this?"
 msgstr ""
-"Canviar l'ordre de carga d'aquesta biblioteca no es recomana.\n"
+"No es recomana canviar l'ordre de càrrega d'aquesta biblioteca.\n"
 "Esteu segur que voleu fer això?"
 
 #: winecfg.rc:55
@@ -13493,8 +13493,8 @@ msgid ""
 msgstr ""
 "No podeu afegir més unitats.\n"
 "\n"
-"Cada unitat ha de tenir una lletra, d'A a Z, així que no podeu tenir més de "
-"26."
+"Cada unitat ha de tenir una lletra, de la A a la Z, així que no en podeu tenir "
+"més de 26."
 
 #: winecfg.rc:75
 msgid "System drive"
@@ -14120,7 +14120,7 @@ msgstr "fs d'arrel"
 
 #: winefile.rc:99
 msgid "unixfs"
-msgstr "fs d'unix"
+msgstr "fs d'Unix"
 
 #: winefile.rc:101
 msgid "Shell"
@@ -14827,14 +14827,14 @@ msgstr ""
 "[/I]  Presumeix directori si la destinació no existeix i s'estan copiant\n"
 "\tdos o més fitxers.\n"
 "[/S]  Copia els directoris i subdirectoris.\n"
-"[/E]  Copia els directoris i subdirectoris, incloent els buits.\n"
+"[/E]  Copia els directoris i subdirectoris, inclosos els buits.\n"
 "[/Q]  No mostris els noms durant la còpia, és a dir, sigues silent.\n"
 "[/F]  Mostra els noms complets de la font i el destinatari durant la còpia.\n"
 "[/L]  Simula l'operació, mostrant els noms que es copiarien.\n"
 "[/W]  Pregunta abans de començar l'operació de còpia.\n"
 "[/T]  Crea una estructura de directoris buits però no copiïs els fitxers.\n"
-"[/Y]  Reprimeix el preguntar en sobreescriure els fitxers.\n"
-"[/-Y] Habilita el preguntar en sobreescriure els fitxers.\n"
+"[/Y]  Elimina les preguntes abans de sobreescriure fitxers.\n"
+"[/-Y] Habilita les preguntes abans de sobreescriure fitxers.\n"
 "[/P]  Pregunta sobre cada fitxer font abans de copiar.\n"
 "[/N]  Copia utilitzant els noms curts.\n"
 "[/U]  Copia només els fitxers que ja existeixin a la destinació.\n"
