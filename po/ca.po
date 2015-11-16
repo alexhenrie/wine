@@ -3934,7 +3934,7 @@ msgstr "Hi ha massa sessions de xarxa.\n"
 
 #: winerror.mc:316
 msgid "Sharing paused.\n"
-msgstr "S'ha pausat la compartició.\n"
+msgstr "Compartició en pausa.\n"
 
 #: winerror.mc:321
 msgid "Request not accepted.\n"
@@ -3942,7 +3942,7 @@ msgstr "No s'ha acceptat la sol·licitud.\n"
 
 #: winerror.mc:326
 msgid "Redirector paused.\n"
-msgstr "S'ha pausat el redirector.\n"
+msgstr "Redirector en pausa.\n"
 
 #: winerror.mc:331
 msgid "File exists.\n"
