@@ -7307,7 +7307,7 @@ msgstr "enfocable"
 #: oleacc.rc:119
 msgctxt "object state"
 msgid "selectable"
-msgstr "selecionable"
+msgstr "seleccionable"
 
 #: oleacc.rc:120
 msgctxt "object state"
