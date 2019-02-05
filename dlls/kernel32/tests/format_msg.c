@@ -26,8 +26,6 @@
 
 #define ULL(a,b)   (((ULONG64)(a) << 32) | (b))
 
-static const BOOL is_32bit = (sizeof(void *) == sizeof(int));
-
 static DWORD WINAPIV doit(DWORD flags, LPCVOID src, DWORD msg_id, DWORD lang_id,
                           LPSTR out, DWORD outsize, ... )
 {
@@ -1711,28 +1709,26 @@ static void test_message_from_64bit_number(void)
         UINT64 number;
         const char expected[32];
         int len;
-        BOOL todo32;
     } unsigned_tests[] =
     {
         { 0, "0", 1 },
         { 1234567890, "1234567890", 10},
-        { ULL(0xFFFFFFFF,0xFFFFFFFF), "18446744073709551615", 20, TRUE },
-        { ULL(0x7FFFFFFF,0xFFFFFFFF), "9223372036854775807", 19, TRUE },
+        { ULL(0xFFFFFFFF,0xFFFFFFFF), "18446744073709551615", 20 },
+        { ULL(0x7FFFFFFF,0xFFFFFFFF), "9223372036854775807", 19 },
     };
     static const struct
     {
         INT64 number;
         const char expected[32];
         int len;
-        BOOL todo32;
     } signed_tests[] =
     {
         { 0, "0" , 1},
         { 1234567890, "1234567890", 10 },
         { -1, "-1", 2},
         { ULL(0xFFFFFFFF,0xFFFFFFFF), "-1", 2},
-        { ULL(0x7FFFFFFF,0xFFFFFFFF), "9223372036854775807", 19, TRUE },
-        { -ULL(0x7FFFFFFF,0xFFFFFFFF), "-9223372036854775807", 20, TRUE },
+        { ULL(0x7FFFFFFF,0xFFFFFFFF), "9223372036854775807", 19 },
+        { -ULL(0x7FFFFFFF,0xFFFFFFFF), "-9223372036854775807", 20 },
     };
     int i;
 
@@ -1741,7 +1737,6 @@ static void test_message_from_64bit_number(void)
         r = doitW(FORMAT_MESSAGE_FROM_STRING, L"%1!I64u!", 0, 0, outW, ARRAY_SIZE(outW),
                   unsigned_tests[i].number);
         MultiByteToWideChar(CP_ACP, 0, unsigned_tests[i].expected, -1, expW, ARRAY_SIZE(expW));
-todo_wine_if(is_32bit && unsigned_tests[i].todo32) {
         ok(!lstrcmpW(outW, expW),"[%d] failed, expected %s, got %s\n", i,
                      unsigned_tests[i].expected, wine_dbgstr_w(outW));
         ok(r == unsigned_tests[i].len,"[%d] failed: r=%d\n", i, r);
@@ -1757,7 +1752,6 @@ todo_wine_if(is_32bit && unsigned_tests[i].todo32) {
         r = doitW(FORMAT_MESSAGE_FROM_STRING, L"%1!I64d!", 0, 0, outW, ARRAY_SIZE(outW),
                   signed_tests[i].number);
         MultiByteToWideChar(CP_ACP, 0, signed_tests[i].expected, -1, expW, ARRAY_SIZE(expW));
-todo_wine_if(is_32bit && signed_tests[i].todo32) {
         ok(!lstrcmpW(outW, expW),"[%d] failed, expected %s, got %s\n", i,
                      signed_tests[i].expected, wine_dbgstr_w(outW));
         ok(r == signed_tests[i].len,"[%d] failed: r=%d\n", i, r);
