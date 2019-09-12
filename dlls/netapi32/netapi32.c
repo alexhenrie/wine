@@ -1331,10 +1331,7 @@ NetUserGetInfo(LPCWSTR servername, LPCWSTR username, DWORD level,
         /* get data */
         status = NetUserGetInfo(servername, username, 0, (LPBYTE *) &ui0);
         if (status != NERR_Success)
-        {
-            NetApiBufferFree(ui0);
             return status;
-        }
         name_sz = lstrlenW(ui0->usri0_name) + 1;
 
         /* set up buffer */
@@ -1374,10 +1371,7 @@ NetUserGetInfo(LPCWSTR servername, LPCWSTR username, DWORD level,
        /* get data */
         status = NetUserGetInfo(servername, username, 0, (LPBYTE *) &ui0);
         if (status != NERR_Success)
-        {
-            NetApiBufferFree(ui0);
             return status;
-        }
         name_sz = lstrlenW(ui0->usri0_name) + 1;
         home_dir_sz = GetEnvironmentVariableW(L"HOME", NULL,0);
         /* set up buffer */
