@@ -27,6 +27,7 @@
 #include "in6addr.h"
 #include "inaddr.h"
 #include "ip2string.h"
+#include "shlwapi.h"
 
 #ifndef __WINE_WINTERNL_H
 
@@ -80,6 +81,7 @@ static BOOL      (WINAPI *pRtlIsCriticalSectionLocked)(CRITICAL_SECTION *);
 static BOOL      (WINAPI *pRtlIsCriticalSectionLockedByThread)(CRITICAL_SECTION *);
 static NTSTATUS  (WINAPI *pRtlInitializeCriticalSectionEx)(CRITICAL_SECTION *, ULONG, ULONG);
 static NTSTATUS  (WINAPI *pLdrEnumerateLoadedModules)(void *, void *, void *);
+static NTSTATUS  (WINAPI *pLdrGetDllFullName)(HMODULE, PUNICODE_STRING);
 static NTSTATUS  (WINAPI *pLdrRegisterDllNotification)(ULONG, PLDR_DLL_NOTIFICATION_FUNCTION, void *, void **);
 static NTSTATUS  (WINAPI *pLdrUnregisterDllNotification)(void *);
 
@@ -120,6 +122,7 @@ static void InitFunctionPtrs(void)
         pRtlIsCriticalSectionLockedByThread = (void *)GetProcAddress(hntdll, "RtlIsCriticalSectionLockedByThread");
         pRtlInitializeCriticalSectionEx = (void *)GetProcAddress(hntdll, "RtlInitializeCriticalSectionEx");
         pLdrEnumerateLoadedModules = (void *)GetProcAddress(hntdll, "LdrEnumerateLoadedModules");
+        pLdrGetDllFullName = (void *)GetProcAddress(hntdll, "LdrGetDllFullName");
         pLdrRegisterDllNotification = (void *)GetProcAddress(hntdll, "LdrRegisterDllNotification");
         pLdrUnregisterDllNotification = (void *)GetProcAddress(hntdll, "LdrUnregisterDllNotification");
     }
@@ -3682,6 +3685,66 @@ static void test_RtlDestroyHeap(void)
     RtlRemoveVectoredExceptionHandler( handler );
 }
 
+static void test_LdrGetDllFullName(void)
+{
+    static const WCHAR ntdll_dll[] = {'n','t','d','l','l','.','d','l','l',0};
+    static const WCHAR dot_exe[] = {'.','e','x','e',0};
+    HMODULE ntdll = GetModuleHandleA("ntdll.dll");
+    WCHAR ntdll_path[MAX_PATH], path_buffer[MAX_PATH];
+    UNICODE_STRING path = {0, 0, path_buffer};
+    WCHAR expected_terminator;
+    const WCHAR *extension;
+    NTSTATUS status;
+
+    if (!pLdrGetDllFullName)
+    {
+        skip("LdrGetDllFullName not available\n");
+        return;
+    }
+
+    if (0) /* crashes on Windows */
+        pLdrGetDllFullName(ntdll, NULL);
+
+    memset(path_buffer, 0x23, sizeof(path_buffer));
+
+    status = pLdrGetDllFullName(ntdll, &path);
+    ok(status == STATUS_BUFFER_TOO_SMALL, "Expected STATUS_BUFFER_TOO_SMALL, got %08x\n", status);
+    ok(path.Length == 0, "Expected length 0, got %d\n", path.Length);
+    ok(path_buffer[0] == 0x2323, "Expected 0x2323, got 0x%x\n", path_buffer[0]);
+
+    GetSystemDirectoryW(ntdll_path, ARRAY_SIZE(ntdll_path));
+    path.MaximumLength = 5; /* odd numbers produce partially copied characters */
+
+    status = pLdrGetDllFullName(ntdll, &path);
+    ok(status == STATUS_BUFFER_TOO_SMALL, "Expected STATUS_BUFFER_TOO_SMALL, got %08x\n", status);
+    ok(path.Length == path.MaximumLength,
+       "Expected length %d, got %d\n", path.MaximumLength, path.Length);
+    expected_terminator = 0x2300 | (ntdll_path[path.MaximumLength / sizeof(WCHAR)] & 0xFF);
+    ok(path_buffer[path.MaximumLength / sizeof(WCHAR)] == expected_terminator,
+       "Expected 0x%x, got 0x%x\n", expected_terminator, path_buffer[path.MaximumLength / 2]);
+    path_buffer[path.MaximumLength / sizeof(WCHAR)] = 0;
+    ntdll_path[path.MaximumLength / sizeof(WCHAR)] = 0;
+    ok(lstrcmpW(path_buffer, ntdll_path) == 0, "Expected %s, got %s\n",
+       wine_dbgstr_w(ntdll_path), wine_dbgstr_w(path_buffer));
+
+    GetSystemDirectoryW(ntdll_path, ARRAY_SIZE(ntdll_path));
+    PathAppendW(ntdll_path, ntdll_dll);
+    path.MaximumLength = sizeof(path_buffer);
+
+    status = pLdrGetDllFullName(NULL, &path);
+    ok(status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08x\n", status);
+    extension = PathFindExtensionW(path_buffer);
+    ok(lstrcmpW(extension, dot_exe) == 0, "Expected %s, got %s\n",
+       wine_dbgstr_w(dot_exe), wine_dbgstr_w(extension));
+
+    status = pLdrGetDllFullName(ntdll, &path);
+    ok(status == STATUS_SUCCESS, "Expected STATUS_SUCCESS, got %08x\n", status);
+    ok(path.Length == lstrlenW(ntdll_path) * sizeof(WCHAR), "Expected length %d, got %d\n",
+       lstrlenW(ntdll_path) * sizeof(WCHAR), path.Length);
+    ok(lstrcmpiW(path_buffer, ntdll_path) == 0, "Expected %s, got %s\n",
+       wine_dbgstr_w(ntdll_path), wine_dbgstr_w(path_buffer));
+}
+
 START_TEST(rtl)
 {
     InitFunctionPtrs();
@@ -3725,4 +3788,5 @@ START_TEST(rtl)
     test_LdrRegisterDllNotification();
     test_DbgPrint();
     test_RtlDestroyHeap();
+    test_LdrGetDllFullName();
 }
