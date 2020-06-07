@@ -1626,6 +1626,31 @@ NTSTATUS WINAPI LdrEnumerateLoadedModules( void *unknown, LDRENUMPROC callback, 
 }
 
 /******************************************************************
+ *              LdrGetDllFullName (NTDLL.@)
+ */
+NTSTATUS WINAPI LdrGetDllFullName(HMODULE module, UNICODE_STRING *name)
+{
+    WINE_MODREF *wm;
+
+    TRACE( "(%p, %p)\n", module, name );
+
+    if (!module) module = NtCurrentTeb()->Peb->ImageBaseAddress;
+
+    RtlEnterCriticalSection( &loader_section );
+    wm = get_modref( module );
+    RtlLeaveCriticalSection( &loader_section );
+
+    if (!wm) return STATUS_DLL_NOT_FOUND;
+
+    RtlCopyUnicodeString( name, &wm->ldr.FullDllName );
+
+    if (name->MaximumLength < wm->ldr.FullDllName.Length + sizeof(WCHAR))
+        return STATUS_BUFFER_TOO_SMALL;
+
+    return STATUS_SUCCESS;
+}
+
+/******************************************************************
  *              LdrRegisterDllNotification (NTDLL.@)
  */
 NTSTATUS WINAPI LdrRegisterDllNotification(ULONG flags, PLDR_DLL_NOTIFICATION_FUNCTION callback,

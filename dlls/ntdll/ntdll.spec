@@ -87,6 +87,7 @@
 @ stdcall LdrFindResource_U(long ptr long ptr)
 @ stub LdrFlushAlternateResourceModules
 @ stdcall LdrGetDllDirectory(ptr)
+@ stdcall LdrGetDllFullName(long ptr)
 @ stdcall LdrGetDllHandle(wstr long ptr ptr)
 # @ stub LdrGetDllHandleEx
 @ stdcall LdrGetDllPath(wstr long ptr ptr)

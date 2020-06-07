@@ -3698,7 +3698,7 @@ static void test_LdrGetDllFullName(void)
 
     if (!pLdrGetDllFullName)
     {
-        skip("LdrGetDllFullName not available\n");
+        win_skip("LdrGetDllFullName not available\n");
         return;
     }
 
