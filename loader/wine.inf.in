@@ -494,6 +494,10 @@ HKCU,Software\Wine\FileOpenNoIntegration\.txt,"notepad",,"%11%\notepad.exe %1"
 HKCU,Software\Wine\FileOpenNoIntegration\.url,"ieframe",,"rundll32.exe ieframe.dll,OpenURL %l"
 HKCU,Software\Wine\FileOpenNoIntegration\.wri,"wordpad",,"""%16422%\Windows NT\Accessories\wordpad.exe"" %1"
 HKCU,Software\Wine\FileOpenNoIntegration\.xml,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+HKCU,Software\Wine\FileOpenNoIntegration\ftp,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+HKCU,Software\Wine\FileOpenNoIntegration\http,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+HKCU,Software\Wine\FileOpenNoIntegration\https,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+HKCU,Software\Wine\FileOpenNoIntegration\mailto,"winebrowser",,"%11%\winebrowser %1"
 
 [ContentIndex]
 HKLM,System\CurrentControlSet\Control\ContentIndex\Language\Neutral,"WBreakerClass",,"{369647e0-17b0-11ce-9950-00aa004bbb1f}"

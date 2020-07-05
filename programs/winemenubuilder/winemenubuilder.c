@@ -2258,10 +2258,13 @@ static BOOL has_association_changed(LPCWSTR extensionW, LPCSTR mimeType, LPCWSTR
             ret = TRUE;
         HeapFree(GetProcessHeap(), 0, valueA);
 
-        value = reg_get_valW(assocKey, extensionW, ProgIDW);
-        if (!value || strcmpW(value, progId))
-            ret = TRUE;
-        HeapFree(GetProcessHeap(), 0, value);
+        if (progId)
+        {
+            value = reg_get_valW(assocKey, extensionW, ProgIDW);
+            if (!value || strcmpW(value, progId))
+                ret = TRUE;
+            HeapFree(GetProcessHeap(), 0, value);
+        }
 
         valueA = reg_get_val_utf8(assocKey, extensionW, AppNameW);
         if (!valueA || lstrcmpA(valueA, appName))
@@ -2345,7 +2348,7 @@ static void update_association(LPCWSTR extension, LPCSTR mimeType, LPCWSTR progI
     }
 
     RegSetValueExW(subkey, MimeTypeW, 0, REG_SZ, (const BYTE*) mimeTypeW, (lstrlenW(mimeTypeW) + 1) * sizeof(WCHAR));
-    RegSetValueExW(subkey, ProgIDW, 0, REG_SZ, (const BYTE*) progId, (lstrlenW(progId) + 1) * sizeof(WCHAR));
+    if (progId) RegSetValueExW(subkey, ProgIDW, 0, REG_SZ, (const BYTE*) progId, (lstrlenW(progId) + 1) * sizeof(WCHAR));
     RegSetValueExW(subkey, AppNameW, 0, REG_SZ, (const BYTE*) appNameW, (lstrlenW(appNameW) + 1) * sizeof(WCHAR));
     RegSetValueExW(subkey, DesktopFileW, 0, REG_SZ, (const BYTE*) desktopFileW, (lstrlenW(desktopFileW) + 1) * sizeof(WCHAR));
     if (openWithIcon)
@@ -2484,7 +2487,7 @@ static BOOL is_extension_banned(LPCWSTR extension)
     return FALSE;
 }
 
-static BOOL on_exclude_list(const WCHAR *extension, const WCHAR *command)
+static BOOL on_exclude_list(const WCHAR *win_type, const WCHAR *command)
 {
     static const WCHAR FileOpenNoIntegrationW[] = {
         'S','o','f','t','w','a','r','e','\\',
@@ -2497,11 +2500,11 @@ static BOOL on_exclude_list(const WCHAR *extension, const WCHAR *command)
     DWORD len = ARRAY_SIZE(program_name);
     DWORD i = 0;
 
-    if (ARRAY_SIZE(FileOpenNoIntegrationW) + lstrlenW(extension) > ARRAY_SIZE(key_path))
+    if (ARRAY_SIZE(FileOpenNoIntegrationW) + lstrlenW(win_type) > ARRAY_SIZE(key_path))
         return FALSE;
 
     lstrcpyW(key_path, FileOpenNoIntegrationW);
-    lstrcatW(key_path, extension);
+    lstrcatW(key_path, win_type);
 
     if (RegOpenKeyExW(HKEY_CURRENT_USER, key_path, 0, KEY_QUERY_VALUE, &key) != ERROR_SUCCESS)
         return FALSE;
@@ -2530,7 +2533,7 @@ static const char* get_special_mime_type(LPCWSTR extension)
     return NULL;
 }
 
-static BOOL write_freedesktop_association_entry(const char *desktopPath, const char *dot_extension,
+static BOOL write_freedesktop_association_entry(const char *desktopPath, const char *winType,
                                                 const char *friendlyAppName, const char *mimeType,
                                                 const char *progId, const char *openWithIcon)
 {
@@ -2539,8 +2542,8 @@ static BOOL write_freedesktop_association_entry(const char *desktopPath, const c
     const char *prefix = getenv("WINEPREFIX");
     const char *home = getenv("HOME");
 
-    WINE_TRACE("writing association for file type %s, friendlyAppName=%s, MIME type %s, progID=%s, icon=%s to file %s\n",
-               wine_dbgstr_a(dot_extension), wine_dbgstr_a(friendlyAppName), wine_dbgstr_a(mimeType),
+    WINE_TRACE("writing association for type %s, friendlyAppName=%s, MIME type %s, progID=%s, icon=%s to file %s\n",
+               wine_dbgstr_a(winType), wine_dbgstr_a(friendlyAppName), wine_dbgstr_a(mimeType),
                wine_dbgstr_a(progId), wine_dbgstr_a(openWithIcon), wine_dbgstr_a(desktopPath));
 
     desktop = fopen(desktopPath, "w");
@@ -2551,11 +2554,15 @@ static BOOL write_freedesktop_association_entry(const char *desktopPath, const c
         fprintf(desktop, "Name=%s\n", friendlyAppName);
         fprintf(desktop, "MimeType=%s;\n", mimeType);
         if (prefix)
-            fprintf(desktop, "Exec=env WINEPREFIX=\"%s\" wine start /ProgIDOpen %s %%f\n", prefix, progId);
+            fprintf(desktop, "Exec=env WINEPREFIX=\"%s\" wine start", prefix);
         else if (home)
-            fprintf(desktop, "Exec=env WINEPREFIX=\"%s/.wine\" wine start /ProgIDOpen %s %%f\n", home, progId);
+            fprintf(desktop, "Exec=env WINEPREFIX=\"%s/.wine\" wine start", home);
         else
-            fprintf(desktop, "Exec=wine start /ProgIDOpen %s %%f\n", progId);
+            fprintf(desktop, "Exec=wine start");
+        if (progId) /* file association */
+            fprintf(desktop, " /ProgIDOpen %s %%f\n", progId);
+        else /* protocol association */
+            fprintf(desktop, " %%u\n");
         fprintf(desktop, "NoDisplay=true\n");
         fprintf(desktop, "StartupNotify=true\n");
         if (openWithIcon)
@@ -2571,6 +2578,7 @@ static BOOL write_freedesktop_association_entry(const char *desktopPath, const c
 static BOOL generate_associations(const char *xdg_data_home, const char *packages_dir, const char *applications_dir)
 {
     static const WCHAR openW[] = {'o','p','e','n',0};
+    static const WCHAR UrlProtocolW[] = {'U','R','L',' ','P','r','o','t','o','c','o','l',0};
     struct wine_rb_tree mimeProgidTree = { winemenubuilder_rb_string_compare };
     struct list nativeMimeTypes = LIST_INIT(nativeMimeTypes);
     LSTATUS ret = 0;
@@ -2585,26 +2593,33 @@ static BOOL generate_associations(const char *xdg_data_home, const char *package
 
     for (i = 0; ; i++)
     {
-        WCHAR *extensionW = NULL;
+        WCHAR *winTypeW = NULL;
         DWORD size = 1024;
+        BOOL is_protocol_type = FALSE;
 
         do
         {
-            HeapFree(GetProcessHeap(), 0, extensionW);
-            extensionW = HeapAlloc(GetProcessHeap(), 0, size * sizeof(WCHAR));
-            if (extensionW == NULL)
+            HeapFree(GetProcessHeap(), 0, winTypeW);
+            winTypeW = HeapAlloc(GetProcessHeap(), 0, size * sizeof(WCHAR));
+            if (winTypeW == NULL)
             {
                 WINE_ERR("out of memory\n");
                 ret = ERROR_OUTOFMEMORY;
                 break;
             }
-            ret = RegEnumKeyExW(HKEY_CLASSES_ROOT, i, extensionW, &size, NULL, NULL, NULL, NULL);
+            ret = RegEnumKeyExW(HKEY_CLASSES_ROOT, i, winTypeW, &size, NULL, NULL, NULL, NULL);
             size *= 2;
         } while (ret == ERROR_MORE_DATA);
 
-        if (ret == ERROR_SUCCESS && extensionW[0] == '.' && !is_extension_banned(extensionW))
+        if (ret == ERROR_SUCCESS && winTypeW[0] != '.')
         {
-            char *extensionA = NULL;
+            if (RegGetValueW(HKEY_CLASSES_ROOT, winTypeW, UrlProtocolW, RRF_RT_ANY, NULL, NULL, NULL) == ERROR_SUCCESS)
+                is_protocol_type = TRUE;
+        }
+
+        if (ret == ERROR_SUCCESS && (is_protocol_type || (winTypeW[0] == '.' && !is_extension_banned(winTypeW))))
+        {
+            char *winTypeA = NULL;
             WCHAR *commandW = NULL;
             WCHAR *executableW = NULL;
             char *openWithIconA = NULL;
@@ -2620,23 +2635,23 @@ static BOOL generate_associations(const char *xdg_data_home, const char *package
             char *progIdA = NULL;
             char *mimeProgId = NULL;
 
-            commandW = assoc_query(ASSOCSTR_COMMAND, extensionW, openW);
+            commandW = assoc_query(ASSOCSTR_COMMAND, winTypeW, openW);
             if (commandW == NULL)
                 /* no command => no application is associated */
                 goto end;
 
-            if (on_exclude_list(extensionW, commandW))
+            if (on_exclude_list(winTypeW, commandW))
                 /* command is on the exclude list => desktop integration is not desirable */
                 goto end;
 
-            extensionA = wchars_to_utf8_chars(strlwrW(extensionW));
-            if (extensionA == NULL)
+            winTypeA = wchars_to_utf8_chars(strlwrW(winTypeW));
+            if (winTypeA == NULL)
             {
                 WINE_ERR("out of memory\n");
                 goto end;
             }
 
-            friendlyDocNameW = assoc_query(ASSOCSTR_FRIENDLYDOCNAME, extensionW, NULL);
+            friendlyDocNameW = assoc_query(ASSOCSTR_FRIENDLYDOCNAME, winTypeW, NULL);
             if (friendlyDocNameW)
             {
                 friendlyDocNameA = wchars_to_utf8_chars(friendlyDocNameW);
@@ -2647,61 +2662,105 @@ static BOOL generate_associations(const char *xdg_data_home, const char *package
                 }
             }
 
-            iconW = assoc_query(ASSOCSTR_DEFAULTICON, extensionW, NULL);
+            iconW = assoc_query(ASSOCSTR_DEFAULTICON, winTypeW, NULL);
 
-            contentTypeW = assoc_query(ASSOCSTR_CONTENTTYPE, extensionW, NULL);
+            contentTypeW = assoc_query(ASSOCSTR_CONTENTTYPE, winTypeW, NULL);
             if (contentTypeW)
                 strlwrW(contentTypeW);
 
-            if (!freedesktop_mime_type_for_extension(&nativeMimeTypes, extensionA, extensionW, &mimeTypeA))
-                goto end;
-
-            if (mimeTypeA == NULL)
+            if (is_protocol_type)
             {
-                if (contentTypeW != NULL && strchrW(contentTypeW, '/'))
-                    mimeTypeA = wchars_to_utf8_chars(contentTypeW);
-                else if ((get_special_mime_type(extensionW)))
-                    mimeTypeA = strdupA(get_special_mime_type(extensionW));
-                else
-                    mimeTypeA = heap_printf("application/x-wine-extension-%s", &extensionA[1]);
+                mimeTypeA = heap_printf("x-scheme-handler/%s", winTypeA);
+            }
+            else
+            {
+                if (!freedesktop_mime_type_for_extension(&nativeMimeTypes, winTypeA, winTypeW, &mimeTypeA))
+                    goto end;
 
-                if (mimeTypeA != NULL)
+                if (mimeTypeA == NULL)
                 {
-                    /* GNOME seems to ignore the <icon> tag in MIME packages,
-                     * and the default name is more intuitive anyway.
-                     */
-                    if (iconW)
-                    {
-                        char *flattened_mime = slashes_to_minuses(mimeTypeA);
-                        if (flattened_mime)
-                        {
-                            int index = 0;
-                            WCHAR *comma = strrchrW(iconW, ',');
-                            if (comma)
-                            {
-                                *comma = 0;
-                                index = atoiW(comma + 1);
-                            }
-                            iconA = extract_icon(iconW, index, flattened_mime, FALSE);
-                            HeapFree(GetProcessHeap(), 0, flattened_mime);
-                        }
-                    }
+                    if (contentTypeW != NULL && strchrW(contentTypeW, '/'))
+                        mimeTypeA = wchars_to_utf8_chars(contentTypeW);
+                    else if ((get_special_mime_type(winTypeW)))
+                        mimeTypeA = strdupA(get_special_mime_type(winTypeW));
+                    else
+                        mimeTypeA = heap_printf("application/x-wine-extension-%s", winTypeA+1);
 
-                    write_freedesktop_mime_type_entry(packages_dir, extensionA, mimeTypeA, friendlyDocNameA);
-                    hasChanged = TRUE;
+                    if (mimeTypeA != NULL)
+                    {
+                        /* GNOME seems to ignore the <icon> tag in MIME packages,
+                         * and the default name is more intuitive anyway.
+                         */
+                        if (iconW)
+                        {
+                            char *flattened_mime = slashes_to_minuses(mimeTypeA);
+                            if (flattened_mime)
+                            {
+                                int index = 0;
+                                WCHAR *comma = strrchrW(iconW, ',');
+                                if (comma)
+                                {
+                                    *comma = 0;
+                                    index = atoiW(comma + 1);
+                                }
+                                iconA = extract_icon(iconW, index, flattened_mime, FALSE);
+                                HeapFree(GetProcessHeap(), 0, flattened_mime);
+                            }
+                        }
+
+                        write_freedesktop_mime_type_entry(packages_dir, winTypeA, mimeTypeA, friendlyDocNameA);
+                        hasChanged = TRUE;
+                    }
+                    else
+                    {
+                        WINE_FIXME("out of memory\n");
+                        goto end;
+                    }
+                }
+
+                progIdW = reg_get_valW(HKEY_CLASSES_ROOT, winTypeW, NULL);
+                if (progIdW)
+                {
+                    progIdA = escape(progIdW);
+                    if (progIdA == NULL)
+                    {
+                        WINE_ERR("out of memory\n");
+                        goto end;
+                    }
                 }
                 else
+                    goto end; /* no progID => not a file type association */
+
+                /* Do not allow duplicate ProgIDs for a MIME type, it causes unnecessary duplication in Open dialogs */
+                mimeProgId = heap_printf("%s=>%s", mimeTypeA, progIdA);
+                if (mimeProgId)
                 {
-                    WINE_FIXME("out of memory\n");
-                    goto end;
+                    struct rb_string_entry *entry;
+                    if (wine_rb_get(&mimeProgidTree, mimeProgId))
+                    {
+                        HeapFree(GetProcessHeap(), 0, mimeProgId);
+                        goto end;
+                    }
+                    entry = HeapAlloc(GetProcessHeap(), 0, sizeof(struct rb_string_entry));
+                    if (!entry)
+                    {
+                        WINE_ERR("out of memory allocating rb_string_entry\n");
+                        goto end;
+                    }
+                    entry->string = mimeProgId;
+                    if (wine_rb_put(&mimeProgidTree, mimeProgId, &entry->entry))
+                    {
+                        WINE_ERR("error updating rb tree\n");
+                        goto end;
+                    }
                 }
             }
 
-            executableW = assoc_query(ASSOCSTR_EXECUTABLE, extensionW, openW);
+            executableW = assoc_query(ASSOCSTR_EXECUTABLE, winTypeW, openW);
             if (executableW)
                 openWithIconA = compute_native_identifier(0, executableW);
 
-            friendlyAppNameW = assoc_query(ASSOCSTR_FRIENDLYAPPNAME, extensionW, openW);
+            friendlyAppNameW = assoc_query(ASSOCSTR_FRIENDLYAPPNAME, winTypeW, openW);
             if (friendlyAppNameW)
             {
                 friendlyAppNameA = wchars_to_utf8_chars(friendlyAppNameW);
@@ -2721,52 +2780,19 @@ static BOOL generate_associations(const char *xdg_data_home, const char *package
                 }
             }
 
-            progIdW = reg_get_valW(HKEY_CLASSES_ROOT, extensionW, NULL);
-            if (progIdW)
+            if (has_association_changed(winTypeW, mimeTypeA, progIdW, friendlyAppNameA, openWithIconA))
             {
-                progIdA = escape(progIdW);
-                if (progIdA == NULL)
-                {
-                    WINE_ERR("out of memory\n");
-                    goto end;
-                }
-            }
-            else
-                goto end; /* no progID => not a file type association */
-
-            /* Do not allow duplicate ProgIDs for a MIME type, it causes unnecessary duplication in Open dialogs */
-            mimeProgId = heap_printf("%s=>%s", mimeTypeA, progIdA);
-            if (mimeProgId)
-            {
-                struct rb_string_entry *entry;
-                if (wine_rb_get(&mimeProgidTree, mimeProgId))
-                {
-                    HeapFree(GetProcessHeap(), 0, mimeProgId);
-                    goto end;
-                }
-                entry = HeapAlloc(GetProcessHeap(), 0, sizeof(struct rb_string_entry));
-                if (!entry)
-                {
-                    WINE_ERR("out of memory allocating rb_string_entry\n");
-                    goto end;
-                }
-                entry->string = mimeProgId;
-                if (wine_rb_put(&mimeProgidTree, mimeProgId, &entry->entry))
-                {
-                    WINE_ERR("error updating rb tree\n");
-                    goto end;
-                }
-            }
-
-            if (has_association_changed(extensionW, mimeTypeA, progIdW, friendlyAppNameA, openWithIconA))
-            {
-                char *desktopPath = heap_printf("%s/wine-extension-%s.desktop", applications_dir, &extensionA[1]);
+                char *desktopPath;
+                if (is_protocol_type)
+                    desktopPath = heap_printf("%s/wine-protocol-%s.desktop", applications_dir, winTypeA);
+                else
+                    desktopPath = heap_printf("%s/wine-extension-%s.desktop", applications_dir, winTypeA+1);
                 if (desktopPath)
                 {
-                    if (write_freedesktop_association_entry(desktopPath, extensionA, friendlyAppNameA, mimeTypeA, progIdA, openWithIconA))
+                    if (write_freedesktop_association_entry(desktopPath, winTypeA, friendlyAppNameA, mimeTypeA, progIdA, openWithIconA))
                     {
                         hasChanged = TRUE;
-                        update_association(extensionW, mimeTypeA, progIdW, friendlyAppNameA, desktopPath, openWithIconA);
+                        update_association(winTypeW, mimeTypeA, progIdW, friendlyAppNameA, desktopPath, openWithIconA);
                     }
                     HeapFree(GetProcessHeap(), 0, desktopPath);
                 }
@@ -2779,7 +2805,7 @@ static BOOL generate_associations(const char *xdg_data_home, const char *package
             }
 
         end:
-            HeapFree(GetProcessHeap(), 0, extensionA);
+            HeapFree(GetProcessHeap(), 0, winTypeA);
             HeapFree(GetProcessHeap(), 0, commandW);
             HeapFree(GetProcessHeap(), 0, executableW);
             HeapFree(GetProcessHeap(), 0, openWithIconA);
@@ -2794,7 +2820,7 @@ static BOOL generate_associations(const char *xdg_data_home, const char *package
             HeapFree(GetProcessHeap(), 0, progIdW);
             HeapFree(GetProcessHeap(), 0, progIdA);
         }
-        HeapFree(GetProcessHeap(), 0, extensionW);
+        HeapFree(GetProcessHeap(), 0, winTypeW);
         if (ret != ERROR_SUCCESS)
             break;
     }
