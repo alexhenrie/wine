@@ -485,6 +485,16 @@ HKCR,MIME\Database\Charset\us-ascii,"AliasForCharset",,iso-8859-1
 HKCR,MIME\Database\Charset\visual,"AliasForCharset",,iso-8859-8
 HKCR,MIME\Database\Charset\Windows-1254,"AliasForCharset",,iso-8859-9
 
+HKCU,Software\Wine\FileOpenNoIntegration\.htm,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+HKCU,Software\Wine\FileOpenNoIntegration\.html,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+HKCU,Software\Wine\FileOpenNoIntegration\.ini,"notepad",,"%11%\notepad.exe %1"
+HKCU,Software\Wine\FileOpenNoIntegration\.pdf,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+HKCU,Software\Wine\FileOpenNoIntegration\.rtf,"wordpad",,"""%16422%\Windows NT\Accessories\wordpad.exe"" %1"
+HKCU,Software\Wine\FileOpenNoIntegration\.txt,"notepad",,"%11%\notepad.exe %1"
+HKCU,Software\Wine\FileOpenNoIntegration\.url,"ieframe",,"rundll32.exe ieframe.dll,OpenURL %l"
+HKCU,Software\Wine\FileOpenNoIntegration\.wri,"wordpad",,"""%16422%\Windows NT\Accessories\wordpad.exe"" %1"
+HKCU,Software\Wine\FileOpenNoIntegration\.xml,"winebrowser",,"""%11%\winebrowser.exe"" -nohome"
+
 [ContentIndex]
 HKLM,System\CurrentControlSet\Control\ContentIndex\Language\Neutral,"WBreakerClass",,"{369647e0-17b0-11ce-9950-00aa004bbb1f}"
 HKLM,System\CurrentControlSet\Control\ContentIndex\Language\Neutral,"StemmerClass",,""

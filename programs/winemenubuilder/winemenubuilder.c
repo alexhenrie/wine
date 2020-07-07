@@ -2484,6 +2484,44 @@ static BOOL is_extension_banned(LPCWSTR extension)
     return FALSE;
 }
 
+static BOOL on_exclude_list(const WCHAR *extension, const WCHAR *command)
+{
+    static const WCHAR FileOpenNoIntegrationW[] = {
+        'S','o','f','t','w','a','r','e','\\',
+        'W','i','n','e','\\',
+        'F','i','l','e','O','p','e','n','N','o','I','n','t','e','g','r','a','t','i','o','n','\\',0
+    };
+    WCHAR key_path[MAX_PATH];
+    HKEY key;
+    WCHAR program_name[MAX_PATH], *command_to_exclude;
+    DWORD len = ARRAY_SIZE(program_name);
+    DWORD i = 0;
+
+    if (ARRAY_SIZE(FileOpenNoIntegrationW) + lstrlenW(extension) > ARRAY_SIZE(key_path))
+        return FALSE;
+
+    lstrcpyW(key_path, FileOpenNoIntegrationW);
+    lstrcatW(key_path, extension);
+
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, key_path, 0, KEY_QUERY_VALUE, &key) != ERROR_SUCCESS)
+        return FALSE;
+
+    while (RegEnumValueW(key, i, program_name, &len, NULL, NULL, NULL, NULL) == ERROR_SUCCESS)
+    {
+        command_to_exclude = reg_get_valW(HKEY_CURRENT_USER, key_path, program_name);
+        if (strcmpW(command, command_to_exclude) == 0)
+        {
+            RegCloseKey(key);
+            return TRUE;
+        }
+        len = ARRAY_SIZE(program_name);
+        i++;
+    }
+
+    RegCloseKey(key);
+    return FALSE;
+}
+
 static const char* get_special_mime_type(LPCWSTR extension)
 {
     static const WCHAR lnkW[] = {'.','l','n','k',0};
@@ -2582,6 +2620,15 @@ static BOOL generate_associations(const char *xdg_data_home, const char *package
             char *progIdA = NULL;
             char *mimeProgId = NULL;
 
+            commandW = assoc_query(ASSOCSTR_COMMAND, extensionW, openW);
+            if (commandW == NULL)
+                /* no command => no application is associated */
+                goto end;
+
+            if (on_exclude_list(extensionW, commandW))
+                /* command is on the exclude list => desktop integration is not desirable */
+                goto end;
+
             extensionA = wchars_to_utf8_chars(strlwrW(extensionW));
             if (extensionA == NULL)
             {
@@ -2649,11 +2696,6 @@ static BOOL generate_associations(const char *xdg_data_home, const char *package
                     goto end;
                 }
             }
-
-            commandW = assoc_query(ASSOCSTR_COMMAND, extensionW, openW);
-            if (commandW == NULL)
-                /* no command => no application is associated */
-                goto end;
 
             executableW = assoc_query(ASSOCSTR_EXECUTABLE, extensionW, openW);
             if (executableW)
