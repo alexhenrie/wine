@@ -46,6 +46,16 @@ WINE_DEFAULT_DEBUG_CHANNEL(psdrv);
 #define GET_BE_DWORD(ptr) ((DWORD)MAKELONG( GET_BE_WORD(&((WORD *)(ptr))[1]), \
                                             GET_BE_WORD(&((WORD *)(ptr))[0]) ))
 
+struct name_record
+{
+    USHORT platform_id;
+    USHORT encoding_id;
+    USHORT language_id;
+    USHORT name_id;
+    USHORT length;
+    USHORT offset;
+};
+
 /****************************************************************************
  *  get_download_name
  */
@@ -65,20 +75,12 @@ static void get_download_name(PHYSDEV dev, LPOUTLINETEXTMETRICA potm, char **str
         {
             USHORT count, i;
             BYTE *strings;
-            struct
-            {
-                USHORT platform_id;
-                USHORT encoding_id;
-                USHORT language_id;
-                USHORT name_id;
-                USHORT length;
-                USHORT offset;
-            } *name_record;
+            struct name_record *name_record;
 
             GetFontData(dev->hdc, MS_MAKE_TAG('n','a','m','e'), 0, name, size);
             count = GET_BE_WORD(name + 2);
             strings = name + GET_BE_WORD(name + 4);
-            name_record = (typeof(name_record))(name + 6);
+            name_record = (struct name_record *)(name + 6);
             for(i = 0; i < count; i++, name_record++)
             {
                 name_record->platform_id = GET_BE_WORD(&name_record->platform_id);
@@ -673,20 +675,22 @@ static void get_post2_custom_glyph_name(BYTE *post2header, DWORD size, WORD inde
     name[name_length] = 0;
 }
 
+struct post_header
+{
+    DWORD format;
+    DWORD italicAngle;
+    SHORT underlinePosition;
+    SHORT underlineThickness;
+    DWORD isFixedPitch;
+    DWORD minMemType42;
+    DWORD maxMemType42;
+    DWORD minMemType1;
+    DWORD maxMemType1;
+};
+
 void get_glyph_name(HDC hdc, WORD index, char *name)
 {
-    struct
-    {
-        DWORD format;
-        DWORD italicAngle;
-        SHORT underlinePosition;
-        SHORT underlineThickness;
-        DWORD isFixedPitch;
-        DWORD minMemType42;
-        DWORD maxMemType42;
-        DWORD minMemType1;
-        DWORD maxMemType1;
-    } *post_header;
+    struct post_header *post_header;
     BYTE *post = NULL;
     DWORD size;
 
@@ -703,7 +707,7 @@ void get_glyph_name(HDC hdc, WORD index, char *name)
     size = GetFontData(hdc, MS_MAKE_TAG('p','o','s','t'), 0, post, size);
     if(size < sizeof(*post_header) || size == GDI_ERROR)
         goto cleanup;
-    post_header = (typeof(post_header))(post);
+    post_header = (struct post_header *)(post);
     /* note: only interested in the format for obtaining glyph names */
     post_header->format = GET_BE_DWORD(&post_header->format);
 
