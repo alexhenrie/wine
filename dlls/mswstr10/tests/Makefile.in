@@ -1,0 +1,4 @@
+TESTDLL = mswstr10.dll
+
+SOURCES = \
+	wstr.c
