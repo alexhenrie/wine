@@ -316,6 +316,7 @@ static inline const char *debugstr_sockopt(int level, int optname)
         {
             DEBUG_SOCKOPT(WS_IPV6_ADD_MEMBERSHIP);
             DEBUG_SOCKOPT(WS_IPV6_DROP_MEMBERSHIP);
+            DEBUG_SOCKOPT(WS_IPV6_HOPLIMIT);
             DEBUG_SOCKOPT(WS_IPV6_MULTICAST_IF);
             DEBUG_SOCKOPT(WS_IPV6_MULTICAST_HOPS);
             DEBUG_SOCKOPT(WS_IPV6_MULTICAST_LOOP);
@@ -491,6 +492,9 @@ static const int ws_ipv6_map[][2] =
 #endif
 #ifdef IPV6_DROP_MEMBERSHIP
     MAP_OPTION( IPV6_DROP_MEMBERSHIP ),
+#endif
+#ifdef IPV6_RECVHOPLIMIT
+    { WS_IPV6_HOPLIMIT, IPV6_RECVHOPLIMIT },
 #endif
     MAP_OPTION( IPV6_MULTICAST_IF ),
     MAP_OPTION( IPV6_MULTICAST_HOPS ),
@@ -2487,6 +2491,9 @@ INT WINAPI WS_getsockopt(SOCKET s, INT level,
     case WS_IPPROTO_IPV6:
         switch(optname)
         {
+#ifdef IPV6_RECVHOPLIMIT
+        case WS_IPV6_HOPLIMIT:
+#endif
         case WS_IPV6_MULTICAST_IF:
         case WS_IPV6_MULTICAST_HOPS:
         case WS_IPV6_MULTICAST_LOOP:
@@ -3710,6 +3717,9 @@ int WINAPI WS_setsockopt(SOCKET s, int level, int optname,
 #endif
 #ifdef IPV6_DROP_MEMBERSHIP
         case WS_IPV6_DROP_MEMBERSHIP:
+#endif
+#ifdef IPV6_RECVHOPLIMIT
+        case WS_IPV6_HOPLIMIT:
 #endif
         case WS_IPV6_MULTICAST_IF:
         case WS_IPV6_MULTICAST_HOPS:

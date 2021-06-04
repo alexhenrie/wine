@@ -39,7 +39,8 @@
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
-#include <netinet/in.h>
+# define __APPLE_USE_RFC_3542
+# include <netinet/in.h>
 #endif
 #ifdef HAVE_NETINET_TCP_H
 # include <netinet/tcp.h>
@@ -455,6 +456,25 @@ static int convert_control_headers(struct msghdr *hdr, WSABUF *control)
 #endif /* IP_PKTINFO */
                     default:
                         FIXME("Unhandled IPPROTO_IP message header type %d\n", cmsg_unix->cmsg_type);
+                        break;
+                }
+                break;
+
+            case IPPROTO_IPV6:
+                switch (cmsg_unix->cmsg_type)
+                {
+#if defined(IPV6_HOPLIMIT)
+                    case IPV6_HOPLIMIT:
+                    {
+                        ptr = fill_control_message( WS_IPPROTO_IPV6, WS_IPV6_HOPLIMIT, ptr, &ctlsize,
+                                                    CMSG_DATA(cmsg_unix), sizeof(INT) );
+                        if (!ptr) goto error;
+                        break;
+                    }
+#endif /* IPV6_HOPLIMIT */
+
+                    default:
+                        FIXME("Unhandled IPPROTO_IPV6 message header type %d\n", cmsg_unix->cmsg_type);
                         break;
                 }
                 break;

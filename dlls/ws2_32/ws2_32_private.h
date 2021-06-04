@@ -58,6 +58,7 @@
 #include <sys/socket.h>
 #endif
 #ifdef HAVE_NETINET_IN_H
+# define __APPLE_USE_RFC_3542
 # include <netinet/in.h>
 #endif
 #ifdef HAVE_NETINET_TCP_H
