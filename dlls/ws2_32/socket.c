@@ -320,6 +320,7 @@ static inline const char *debugstr_sockopt(int level, int optname)
             DEBUG_SOCKOPT(WS_IPV6_MULTICAST_IF);
             DEBUG_SOCKOPT(WS_IPV6_MULTICAST_HOPS);
             DEBUG_SOCKOPT(WS_IPV6_MULTICAST_LOOP);
+            DEBUG_SOCKOPT(WS_IPV6_PKTINFO);
             DEBUG_SOCKOPT(WS_IPV6_UNICAST_HOPS);
             DEBUG_SOCKOPT(WS_IPV6_V6ONLY);
             DEBUG_SOCKOPT(WS_IPV6_UNICAST_IF);
@@ -499,6 +500,9 @@ static const int ws_ipv6_map[][2] =
     MAP_OPTION( IPV6_MULTICAST_IF ),
     MAP_OPTION( IPV6_MULTICAST_HOPS ),
     MAP_OPTION( IPV6_MULTICAST_LOOP ),
+#if defined(IPV6_RECVPKTINFO)
+    { WS_IPV6_PKTINFO, IPV6_RECVPKTINFO },
+#endif
     MAP_OPTION( IPV6_UNICAST_HOPS ),
     MAP_OPTION( IPV6_V6ONLY ),
 #ifdef IPV6_UNICAST_IF
@@ -2497,6 +2501,9 @@ INT WINAPI WS_getsockopt(SOCKET s, INT level,
         case WS_IPV6_MULTICAST_IF:
         case WS_IPV6_MULTICAST_HOPS:
         case WS_IPV6_MULTICAST_LOOP:
+#ifdef IPV6_RECVPKTINFO
+        case WS_IPV6_PKTINFO:
+#endif
         case WS_IPV6_UNICAST_HOPS:
         case WS_IPV6_V6ONLY:
 #ifdef IPV6_UNICAST_IF
@@ -3724,6 +3731,9 @@ int WINAPI WS_setsockopt(SOCKET s, int level, int optname,
         case WS_IPV6_MULTICAST_IF:
         case WS_IPV6_MULTICAST_HOPS:
         case WS_IPV6_MULTICAST_LOOP:
+#ifdef IPV6_RECVPKTINFO
+        case WS_IPV6_PKTINFO:
+#endif
         case WS_IPV6_UNICAST_HOPS:
 #ifdef IPV6_UNICAST_IF
         case WS_IPV6_UNICAST_IF:
