@@ -4718,8 +4718,8 @@ int WCMD_volume(BOOL set_label, const WCHAR *path)
   if (set_label) {
     WCMD_output (WCMD_LoadMessage(WCMD_VOLUMEPROMPT));
     WCMD_ReadFile(GetStdHandle(STD_INPUT_HANDLE), string, ARRAY_SIZE(string), &count);
+    string[count-1] = '\0'; /* ReadFile output is not null-terminated! */
     if (count > 1) {
-      string[count-1] = '\0';		/* ReadFile output is not null-terminated! */
       if (string[count-2] == '\r') string[count-2] = '\0'; /* Under Windoze we get CRLF! */
     }
     if (*path) {
