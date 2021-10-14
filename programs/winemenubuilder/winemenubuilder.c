@@ -1994,6 +1994,7 @@ static BOOL write_freedesktop_association_entry(const WCHAR *desktopPath, const 
         fprintf(desktop, "StartupNotify=true\n");
         if (openWithIcon)
             fprintf(desktop, "Icon=%s\n", wchars_to_utf8_chars(openWithIcon));
+        fprintf(desktop, "InitialPreference=0\n");
         ret = TRUE;
         fclose(desktop);
     }
