@@ -320,6 +320,12 @@ HKCR,http\shell\open\command,,2,"""%11%\winebrowser.exe"" ""%1"""
 HKCR,https\shell\open\command,,2,"""%11%\winebrowser.exe"" ""%1"""
 HKCR,mailto\shell\open\command,,2,"""%11%\winebrowser.exe"" ""%1"""
 
+HKCU,Software\Wine\FileOpenNoIntegration,"ieframe",,"ieframe.dll"
+HKCU,Software\Wine\FileOpenNoIntegration,"iexplore",,"iexplore.exe"
+HKCU,Software\Wine\FileOpenNoIntegration,"notepad",,"notepad.exe"
+HKCU,Software\Wine\FileOpenNoIntegration,"winebrowser",,"winebrowser.exe"
+HKCU,Software\Wine\FileOpenNoIntegration,"wordpad",,"wordpad.exe"
+
 [ContentIndex]
 HKLM,System\CurrentControlSet\Control\ContentIndex\Language\Neutral,"WBreakerClass",,"{369647e0-17b0-11ce-9950-00aa004bbb1f}"
 HKLM,System\CurrentControlSet\Control\ContentIndex\Language\Neutral,"StemmerClass",,""

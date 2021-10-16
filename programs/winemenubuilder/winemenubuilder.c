@@ -1974,6 +1974,35 @@ static BOOL is_extension_banned(LPCWSTR extension)
     return FALSE;
 }
 
+static BOOL on_exclude_list(const WCHAR *command)
+{
+    static const WCHAR FileOpenNoIntegrationW[] = L"Software\\Wine\\FileOpenNoIntegration";
+    HKEY key;
+    WCHAR program_name[MAX_PATH], *pattern_to_exclude;
+    DWORD len = ARRAY_SIZE(program_name);
+    DWORD i = 0;
+
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, FileOpenNoIntegrationW, 0, KEY_QUERY_VALUE, &key) != ERROR_SUCCESS)
+        return FALSE;
+
+    while (RegEnumValueW(key, i, program_name, &len, NULL, NULL, NULL, NULL) == ERROR_SUCCESS)
+    {
+        pattern_to_exclude = reg_get_valW(HKEY_CURRENT_USER, FileOpenNoIntegrationW, program_name);
+        if (wcsstr(command, pattern_to_exclude))
+        {
+            heap_free(pattern_to_exclude);
+            RegCloseKey(key);
+            return TRUE;
+        }
+        heap_free(pattern_to_exclude);
+        len = ARRAY_SIZE(program_name);
+        i++;
+    }
+
+    RegCloseKey(key);
+    return FALSE;
+}
+
 static WCHAR *get_special_mime_type(LPCWSTR extension)
 {
     if (!wcsicmp(extension, L".lnk"))
@@ -2054,6 +2083,15 @@ static BOOL generate_associations(const WCHAR *packages_dir, const WCHAR *applic
             WCHAR *mimeProgId = NULL;
             struct rb_string_entry *entry;
 
+            commandW = assoc_query(ASSOCSTR_COMMAND, extensionW, L"open");
+            if (commandW == NULL)
+                /* no command => no application is associated */
+                goto end;
+
+            if (on_exclude_list(commandW))
+                /* command is on the exclude list => desktop integration is not desirable */
+                goto end;
+
             wcslwr(extensionW);
             friendlyDocNameW = assoc_query(ASSOCSTR_FRIENDLYDOCNAME, extensionW, NULL);
 
@@ -2092,11 +2130,6 @@ static BOOL generate_associations(const WCHAR *packages_dir, const WCHAR *applic
                 write_freedesktop_mime_type_entry(packages_dir, extensionW, mimeType, friendlyDocNameW);
                 hasChanged = TRUE;
             }
-
-            commandW = assoc_query(ASSOCSTR_COMMAND, extensionW, L"open");
-            if (commandW == NULL)
-                /* no command => no application is associated */
-                goto end;
 
             executableW = assoc_query(ASSOCSTR_EXECUTABLE, extensionW, L"open");
             if (executableW)
