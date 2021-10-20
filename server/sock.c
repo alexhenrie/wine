@@ -191,6 +191,7 @@ struct sock
     unsigned int        message;     /* message to send */
     obj_handle_t        wparam;      /* message wparam (socket handle) */
     int                 errors[AFD_POLL_BIT_COUNT]; /* event errors */
+    unsigned int        last_error;  /* most recent error code */
     timeout_t           connect_time;/* time the socket was connected */
     struct sock        *deferred;    /* socket that waits for a deferred accept */
     struct async_queue  read_q;      /* queue for asynchronous reads */
@@ -963,6 +964,7 @@ static void post_socket_event( struct sock *sock, enum afd_poll_bit event_bit, i
         sock->pending_events |= event;
         sock->reported_events |= event;
         sock->errors[event_bit] = error;
+        sock->last_error = sock_get_error( error );
     }
 }
 
@@ -978,6 +980,7 @@ static void sock_dispatch_events( struct sock *sock, enum connection_state prevs
         {
             post_socket_event( sock, AFD_POLL_BIT_CONNECT, 0 );
             sock->errors[AFD_POLL_BIT_CONNECT_ERR] = 0;
+            sock->last_error = 0;
         }
         if (event & (POLLERR | POLLHUP))
             post_socket_event( sock, AFD_POLL_BIT_CONNECT_ERR, error );
@@ -1441,6 +1444,7 @@ static struct sock *create_socket(void)
     init_async_queue( &sock->connect_q );
     init_async_queue( &sock->poll_q );
     memset( sock->errors, 0, sizeof(sock->errors) );
+    sock->last_error = 0;
     list_init( &sock->accept_list );
     return sock;
 }
@@ -2675,7 +2679,6 @@ static void sock_ioctl( struct fd *fd, ioctl_code_t code, struct async *async )
     {
         int error;
         socklen_t len = sizeof(error);
-        unsigned int i;
 
         if (get_reply_max_size() < sizeof(error))
         {
@@ -2689,19 +2692,32 @@ static void sock_ioctl( struct fd *fd, ioctl_code_t code, struct async *async )
             return;
         }
 
-        if (!error)
+        if (error)
+            sock->last_error = sock_get_error( error );
+
+        set_reply_data( &sock->last_error, sizeof(sock->last_error) );
+        return;
+    }
+
+    case IOCTL_AFD_WINE_SET_SO_ERROR:
+    {
+        int error;
+        socklen_t len = sizeof(error);
+
+        if (get_req_data_size() < sizeof(sock->last_error))
         {
-            for (i = 0; i < ARRAY_SIZE( sock->errors ); ++i)
-            {
-                if (sock->errors[i])
-                {
-                    error = sock_get_error( sock->errors[i] );
-                    break;
-                }
-            }
+            set_error( STATUS_BUFFER_TOO_SMALL );
+            return;
         }
 
-        set_reply_data( &error, sizeof(error) );
+        /* clear the native error, if any */
+        if (getsockopt( unix_fd, SOL_SOCKET, SO_ERROR, (char *)&error, &len ) < 0)
+        {
+            set_error( sock_get_ntstatus( errno ) );
+            return;
+        }
+
+        sock->last_error = *(unsigned int *)get_req_data();
         return;
     }
 

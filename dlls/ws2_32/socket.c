@@ -2750,9 +2750,7 @@ int WINAPI setsockopt( SOCKET s, int level, int optname, const char *optval, int
         }
 
         case SO_ERROR:
-            FIXME( "SO_ERROR, stub!\n" );
-            SetLastError( WSAENOPROTOOPT );
-            return -1;
+            return server_setsockopt( s, IOCTL_AFD_WINE_SET_SO_ERROR, optval, optlen );
 
         case SO_KEEPALIVE:
             return server_setsockopt( s, IOCTL_AFD_WINE_SET_SO_KEEPALIVE, optval, optlen );
