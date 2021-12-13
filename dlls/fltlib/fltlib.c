@@ -80,3 +80,9 @@ HRESULT WINAPI FilterUnload(LPCWSTR filtername)
 
     return S_OK;
 }
+
+HRESULT WINAPI FilterSendMessage(HANDLE port, void *in, DWORD in_size, void *out, DWORD out_size, DWORD *count)
+{
+    FIXME("(%p, %p, %u, %p, %u %p) stub\n", port, in, in_size, out, out_size, count);
+    return E_NOTIMPL;
+}

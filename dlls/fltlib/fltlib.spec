@@ -18,7 +18,7 @@
 @ stub FilterInstanceGetInformation
 @ stdcall FilterLoad(wstr)
 @ stub FilterReplyMessage
-@ stub FilterSendMessage
+@ stdcall FilterSendMessage(ptr ptr long ptr long ptr)
 @ stdcall FilterUnload(wstr)
 @ stub FilterVolumeClose
 @ stub FilterVolumeFindClose
