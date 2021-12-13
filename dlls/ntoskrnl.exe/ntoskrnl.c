@@ -4447,6 +4447,12 @@ NTSTATUS WINAPI KdEnableDebugger(void)
     return STATUS_DEBUGGER_INACTIVE;
 }
 
+KPROCESSOR_MODE WINAPI ExGetPreviousMode(void)
+{
+    FIXME(": stub.\n");
+    return UserMode;
+}
+
 /*****************************************************
  *           DllMain
  */
