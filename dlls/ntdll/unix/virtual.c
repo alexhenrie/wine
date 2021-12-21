@@ -2647,7 +2647,7 @@ static int alloc_virtual_heap( void *base, SIZE_T size, void *arg )
 void virtual_init(void)
 {
     const struct preload_info **preload_info = dlsym( RTLD_DEFAULT, "wine_main_preload_info" );
-    const char *preload = getenv( "WINEPRELOADRESERVE" );
+    const char *preload;
     struct alloc_virtual_heap alloc_views;
     size_t size;
     int i;
