@@ -87,9 +87,14 @@ static int run_delete(HKEY root, WCHAR *path, REGSAM sam, WCHAR *key_name, WCHAR
     if (value_all)
     {
         DWORD max_value_len = 256, value_len;
-        WCHAR *value_name;
+        WCHAR *value_name, *new_value_name;
 
         value_name = malloc(max_value_len * sizeof(WCHAR));
+        if (!value_name)
+        {
+            output_error(ERROR_NOT_ENOUGH_MEMORY);
+            return 1;
+        }
 
         while (1)
         {
@@ -110,7 +115,13 @@ static int run_delete(HKEY root, WCHAR *path, REGSAM sam, WCHAR *key_name, WCHAR
             else if (rc == ERROR_MORE_DATA)
             {
                 max_value_len *= 2;
-                value_name = realloc(value_name, max_value_len * sizeof(WCHAR));
+                new_value_name = realloc(value_name, max_value_len * sizeof(WCHAR));
+                if (!new_value_name)
+                {
+                    output_error(ERROR_NOT_ENOUGH_MEMORY);
+                    return 1;
+                }
+                value_name = new_value_name;
             }
             else break;
         }
