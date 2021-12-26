@@ -732,6 +732,7 @@ static void test_source_resolver(void)
     GUID guid;
     float rate;
     UINT32 rotation;
+    BOOL ret;
 
     if (!pMFCreateSourceResolver)
     {
@@ -935,12 +936,10 @@ static void test_source_resolver(void)
     hr = IMFMediaSource_Start(mediasource, descriptor, &GUID_NULL, &var);
     ok(hr == S_OK, "Failed to start media source, hr %#lx.\n", hr);
 
-    video_stream = NULL;
-    if (get_event((IMFMediaEventGenerator *)mediasource, MENewStream, &var))
-    {
-        ok(var.vt == VT_UNKNOWN, "Unexpected value type.\n");
-        video_stream = (IMFMediaStream *)var.punkVal;
-    }
+    ret = get_event((IMFMediaEventGenerator *)mediasource, MENewStream, &var);
+    ok(ret, "Failed to get event.\n");
+    ok(var.vt == VT_UNKNOWN, "Unexpected value type.\n");
+    video_stream = (IMFMediaStream *)var.punkVal;
 
     hr = IMFMediaSource_Pause(mediasource);
     ok(hr == S_OK, "Failed to pause media source, hr %#lx.\n", hr);
@@ -996,7 +995,6 @@ static void test_source_resolver(void)
         LONGLONG duration, time;
         DWORD buffer_count;
         IMFSample *sample;
-        BOOL ret;
 
         ret = get_event((IMFMediaEventGenerator *)video_stream, MEMediaSample, &var);
         ok(ret, "Sample %u not received.\n", i + 1);
