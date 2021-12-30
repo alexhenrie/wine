@@ -312,7 +312,7 @@ static HKEY create_special_root_hkey( HKEY hkey, DWORD access )
         attr.SecurityQualityOfService = NULL;
         RtlInitUnicodeString( &name, root_key_names[idx] );
         if (create_key( &hkey, access, &attr, NULL, 0, NULL )) return 0;
-        TRACE( "%s -> %p\n", debugstr_w(attr.ObjectName->Buffer), hkey );
+        TRACE( "%s -> %p\n", debugstr_w(name.Buffer), hkey );
     }
 
     if (!cache_disabled[idx] && !(access & (KEY_WOW64_64KEY | KEY_WOW64_32KEY)))
