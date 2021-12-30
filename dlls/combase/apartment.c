@@ -1033,7 +1033,7 @@ static enum comclass_threadingmodel get_threading_model(const struct class_reg_d
 HRESULT apartment_get_inproc_class_object(struct apartment *apt, const struct class_reg_data *regdata,
         REFCLSID rclsid, REFIID riid, DWORD class_context, void **ppv)
 {
-    WCHAR dllpath[MAX_PATH+1];
+    WCHAR dllpath[MAX_PATH];
     BOOL apartment_threaded;
 
     if (!(class_context & CLSCTX_PS_DLL))
