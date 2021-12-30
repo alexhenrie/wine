@@ -262,7 +262,7 @@ static HKEY create_classes_root_hkey(DWORD access)
     attr.SecurityQualityOfService = NULL;
     RtlInitUnicodeString( &name, L"\\Registry\\Machine\\Software\\Classes" );
     if (create_key( &hkey, access, &attr )) return 0;
-    TRACE( "%s -> %p\n", debugstr_w(attr.ObjectName->Buffer), hkey );
+    TRACE( "%s -> %p\n", debugstr_w(name.Buffer), hkey );
 
     if (!(access & KEY_WOW64_64KEY))
     {
