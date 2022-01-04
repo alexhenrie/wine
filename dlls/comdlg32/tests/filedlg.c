@@ -31,8 +31,6 @@
 
 /* ##### */
 
-static BOOL resizesupported = TRUE;
-
 static void toolbarcheck( HWND hDlg)
 {
     /* test toolbar properties */
@@ -52,8 +50,7 @@ static void toolbarcheck( HWND hDlg)
     ret = SendMessageA( ctrl, TB_ADDSTRINGA, 0, (LPARAM)"winetestwinetest\0\0");
     ok( ret == 0, "addstring returned %ld (expected 0)\n", ret);
     maxtextrows = SendMessageA( ctrl, TB_GETTEXTROWS, 0, 0);
-    ok( maxtextrows == 0 || broken(maxtextrows == 1),  /* Win2k and below */
-        "Get(Max)TextRows returned %d (expected 0)\n", maxtextrows);
+    ok( maxtextrows == 0, "Get(Max)TextRows returned %d (expected 0)\n", maxtextrows);
 }
 
 
@@ -229,7 +226,7 @@ static UINT_PTR CALLBACK create_view_window2_hook(HWND dlg, UINT msg, WPARAM wPa
 
             hr = IShellView2_GetCurrentInfo(shell_view2, &folder_settings);
             ok(SUCCEEDED(hr), "GetCurrentInfo returned %#lx\n", hr);
-            ok(folder_settings.ViewMode == FVM_DETAILS || broken(folder_settings.ViewMode == FVM_LIST), /* nt4 */
+            ok(folder_settings.ViewMode == FVM_DETAILS,
                "view mode is %d, expected FVM_DETAILS\n",
                folder_settings.ViewMode);
 
@@ -346,13 +343,8 @@ static UINT_PTR WINAPI resize_template_hook(HWND dlg, UINT msg, WPARAM wParam, L
             /* test style */
             style = GetWindowLongA( parent, GWL_STYLE);
             if( resize_testcases[index].flags & OFN_ENABLESIZING)
-                if( !(style & WS_SIZEBOX)) {
-                    win_skip( "OFN_ENABLESIZING flag not supported.\n");
-                    resizesupported = FALSE;
-                    PostMessageA( parent, WM_COMMAND, IDCANCEL, 0);
-                } else
-                    ok( style & WS_SIZEBOX,
-                            "testid %d: dialog should have a WS_SIZEBOX style.\n", index);
+                ok( style & WS_SIZEBOX,
+                        "testid %d: dialog should have a WS_SIZEBOX style.\n", index);
             else
                 ok( !(style & WS_SIZEBOX),
                         "testid %d: dialog should not have a WS_SIZEBOX style.\n", index);
@@ -1336,7 +1328,7 @@ START_TEST(filedlg)
     test_ok();
     test_getfolderpath();
     test_mru();
-    if( resizesupported) test_resizable2();
+    test_resizable2();
     test_extension();
     test_null_filename();
     test_directory_filename();
