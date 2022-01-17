@@ -973,15 +973,6 @@ static void test_coop_level_create_device_window(void)
     device_window = FindWindowA("DirectDrawDeviceWnd", "DirectDrawDeviceWnd");
     ok(!device_window, "Unexpected device window found.\n");
 
-    /* Windows versions before 98 / NT5 don't support DDSCL_CREATEDEVICEWINDOW. */
-    if (broken(hr == DDERR_INVALIDPARAMS))
-    {
-        win_skip("DDSCL_CREATEDEVICEWINDOW not supported, skipping test.\n");
-        IDirectDraw4_Release(ddraw);
-        DestroyWindow(focus_window);
-        return;
-    }
-
     hr = IDirectDraw4_SetCooperativeLevel(ddraw, NULL, DDSCL_NORMAL);
     ok(hr == DD_OK, "Got unexpected hr %#x.\n", hr);
     device_window = FindWindowA("DirectDrawDeviceWnd", "DirectDrawDeviceWnd");
