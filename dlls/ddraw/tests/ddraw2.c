@@ -784,15 +784,6 @@ static void test_coop_level_create_device_window(void)
     device_window = FindWindowA("DirectDrawDeviceWnd", "DirectDrawDeviceWnd");
     ok(!device_window, "Unexpected device window found.\n");
 
-    /* Windows versions before 98 / NT5 don't support DDSCL_CREATEDEVICEWINDOW. */
-    if (broken(hr == DDERR_INVALIDPARAMS))
-    {
-        win_skip("DDSCL_CREATEDEVICEWINDOW not supported, skipping test.\n");
-        IDirectDraw2_Release(ddraw);
-        DestroyWindow(focus_window);
-        return;
-    }
-
     hr = IDirectDraw2_SetCooperativeLevel(ddraw, NULL, DDSCL_NORMAL);
     ok(hr == DD_OK, "Got unexpected hr %#x.\n", hr);
     device_window = FindWindowA("DirectDrawDeviceWnd", "DirectDrawDeviceWnd");
@@ -1022,7 +1013,7 @@ static void test_clipper_blt(void)
     }
 
     hr = IDirectDrawSurface_BltFast(dst_surface, 0, 0, src_surface, NULL, DDBLTFAST_WAIT);
-    ok(hr == DDERR_BLTFASTCANTCLIP || broken(hr == E_NOTIMPL /* NT4 */), "Got unexpected hr %#x.\n", hr);
+    ok(hr == DDERR_BLTFASTCANTCLIP, "Got unexpected hr %#x.\n", hr);
 
     hr = IDirectDrawClipper_SetHWnd(clipper, 0, window);
     ok(SUCCEEDED(hr), "Failed to set clipper window, hr %#x.\n", hr);
@@ -1535,12 +1526,6 @@ static void test_texture_load_ckey(void)
     /* No surface has a color key */
     hr = IDirect3DTexture_Load(dst_tex, src_tex);
     ok(SUCCEEDED(hr) || broken(hr == DDERR_INVALIDCAPS), "Got unexpected hr %#x.\n", hr);
-    if (FAILED(hr))
-    {
-        /* Testbot Windows NT VMs */
-        skip("IDirect3DTexture::Load does not work, skipping color keying tests.\n");
-        goto done;
-    }
 
     ckey.dwColorSpaceLowValue = ckey.dwColorSpaceHighValue = 0xdeadbeef;
     hr = IDirectDrawSurface_GetColorKey(dst, DDCKEY_SRCBLT, &ckey);
@@ -3388,13 +3373,6 @@ static void test_coop_level_mode_set(void)
     hr = IDirectDrawSurface_Restore(primary);
     ok(hr == DDERR_WRONGMODE, "Got unexpected hr %#x.\n", hr);
     hr = set_display_mode(ddraw, param.ddraw_width, param.ddraw_height);
-    if (hr == DDERR_NOEXCLUSIVEMODE /* NT4 testbot */)
-    {
-        win_skip("Broken SetDisplayMode(), skipping remaining tests.\n");
-        IDirectDrawSurface_Release(primary);
-        IDirectDraw2_Release(ddraw);
-        goto done;
-    }
     ok(SUCCEEDED(hr), "Failed to set display mode, hr %#x.\n", hr);
     hr = IDirectDrawSurface_Restore(primary);
     ok(hr == DDERR_WRONGMODE, "Got unexpected hr %#x.\n", hr);
@@ -3862,7 +3840,6 @@ static void test_coop_level_mode_set(void)
     ref = IDirectDraw2_Release(ddraw);
     ok(ref == 0, "The ddraw object was not properly freed: refcount %u.\n", ref);
 
-done:
     expect_messages = NULL;
     DestroyWindow(window);
     DestroyWindow(window2);
@@ -3906,13 +3883,6 @@ static void test_coop_level_mode_set_multi(void)
     /* With just a single ddraw object, the display mode is restored on
      * release. */
     hr = set_display_mode(ddraw1, 800, 600);
-    if (hr == DDERR_NOEXCLUSIVEMODE /* NT4 testbot */)
-    {
-        win_skip("Broken SetDisplayMode(), skipping test.\n");
-        IDirectDraw2_Release(ddraw1);
-        DestroyWindow(window);
-        return;
-    }
     ok(SUCCEEDED(hr), "Failed to set display mode, hr %#x.\n", hr);
     w = GetSystemMetrics(SM_CXSCREEN);
     ok(w == 800, "Got unexpected screen width %u.\n", w);
@@ -8815,23 +8785,19 @@ static void test_palette_alpha(void)
             UINT retval;
 
             hr = IDirectDrawSurface2_GetDC(surface, &dc);
-            ok(SUCCEEDED(hr) || broken(hr == DDERR_CANTCREATEDC) /* Win2k testbot */,
-                    "Failed to get DC, hr %#x, %s surface.\n", hr, test_data[i].name);
-            if (SUCCEEDED(hr))
-            {
-                retval = GetDIBColorTable(dc, 1, 1, &rgbquad);
-                ok(retval == 1, "GetDIBColorTable returned unexpected result %u.\n", retval);
-                ok(rgbquad.rgbRed == 0xff, "Expected rgbRed = 0xff, got %#x, %s surface.\n",
-                        rgbquad.rgbRed, test_data[i].name);
-                ok(rgbquad.rgbGreen == 0, "Expected rgbGreen = 0, got %#x, %s surface.\n",
-                        rgbquad.rgbGreen, test_data[i].name);
-                ok(rgbquad.rgbBlue == 0, "Expected rgbBlue = 0, got %#x, %s surface.\n",
-                        rgbquad.rgbBlue, test_data[i].name);
-                ok(rgbquad.rgbReserved == 0, "Expected rgbReserved = 0, got %u, %s surface.\n",
-                        rgbquad.rgbReserved, test_data[i].name);
-                hr = IDirectDrawSurface2_ReleaseDC(surface, dc);
-                ok(SUCCEEDED(hr), "Failed to release DC, hr %#x.\n", hr);
-            }
+            ok(SUCCEEDED(hr), "Failed to get DC, hr %#x, %s surface.\n", hr, test_data[i].name);
+            retval = GetDIBColorTable(dc, 1, 1, &rgbquad);
+            ok(retval == 1, "GetDIBColorTable returned unexpected result %u.\n", retval);
+            ok(rgbquad.rgbRed == 0xff, "Expected rgbRed = 0xff, got %#x, %s surface.\n",
+                    rgbquad.rgbRed, test_data[i].name);
+            ok(rgbquad.rgbGreen == 0, "Expected rgbGreen = 0, got %#x, %s surface.\n",
+                    rgbquad.rgbGreen, test_data[i].name);
+            ok(rgbquad.rgbBlue == 0, "Expected rgbBlue = 0, got %#x, %s surface.\n",
+                    rgbquad.rgbBlue, test_data[i].name);
+            ok(rgbquad.rgbReserved == 0, "Expected rgbReserved = 0, got %u, %s surface.\n",
+                    rgbquad.rgbReserved, test_data[i].name);
+            hr = IDirectDrawSurface2_ReleaseDC(surface, dc);
+            ok(SUCCEEDED(hr), "Failed to release DC, hr %#x.\n", hr);
         }
         IDirectDrawSurface2_Release(surface);
     }
