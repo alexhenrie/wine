@@ -29,6 +29,11 @@
 
 static struct msg_sequence **sequences;
 
+static HWINEVENTHOOK hEvent_hook;
+static DWORD winevent_hook_thread_id;
+static char** winevent_hook_logged_classes;
+static int winevent_hook_seq_index;
+
 typedef enum
 {
     sent = 0x1,
@@ -393,4 +398,57 @@ static void init_msg_sequences(int n)
 
     for (i = 0; i < n; i++)
         sequences[i] = heap_alloc_zero(sizeof(*sequences[i]));
+}
+
+static BOOL is_our_logged_class(HWND hwnd)
+{
+    char buf[256];
+    char **logged_class;
+
+    if (GetClassNameA(hwnd, buf, sizeof(buf)))
+    {
+        for (logged_class = winevent_hook_logged_classes; *logged_class; logged_class++)
+        {
+            if (!lstrcmpiA(buf, *logged_class))
+                return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void CALLBACK win_event_proc(HWINEVENTHOOK hevent, DWORD event, HWND hwnd, LONG object_id,
+                                    LONG child_id, DWORD thread_id, DWORD event_time)
+{
+    ok(thread_id == winevent_hook_thread_id, "we didn't ask for events from other threads\n");
+
+    /* ignore mouse cursor events */
+    if (object_id == OBJID_CURSOR) return;
+
+    if (!hwnd || is_our_logged_class(hwnd))
+    {
+        struct message msg;
+        msg.message = event;
+        msg.flags = winevent_hook|wparam|lparam;
+        msg.wParam = object_id;
+        msg.lParam = child_id;
+        add_message(winevent_hook_seq_index, &msg);
+    }
+}
+
+static inline void hook_win_events(int sequence_index, char **logged_classes)
+{
+    UINT event;
+    int i;
+
+    hEvent_hook = SetWinEventHook(EVENT_MIN, EVENT_MAX, GetModuleHandleA(0), win_event_proc, 0,
+                                  GetCurrentThreadId(), WINEVENT_INCONTEXT);
+    if (!hEvent_hook)
+        return;
+
+    for (event = EVENT_MIN; event <= EVENT_MAX; event++)
+        ok(IsWinEventHookInstalled(event), "IsWinEventHookInstalled(%u) failed\n", event);
+
+    winevent_hook_thread_id = GetCurrentThreadId();
+    winevent_hook_logged_classes = logged_classes;
+    winevent_hook_seq_index = sequence_index;
 }
