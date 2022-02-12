@@ -2373,6 +2373,7 @@ static void test_visual(void)
 
 START_TEST(button)
 {
+    static const char *logged_classes[] = {"Button", NULL};
     BOOL (WINAPI * pIsThemeActive)(VOID);
     ULONG_PTR ctx_cookie;
     HMODULE uxtheme;
@@ -2394,6 +2395,7 @@ START_TEST(button)
 
     init_functions();
     init_msg_sequences(NUM_MSG_SEQUENCES);
+    hook_win_events(COMBINED_SEQ_INDEX, logged_classes);
 
     test_button_class();
     test_button_messages();
