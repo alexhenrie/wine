@@ -18618,7 +18618,11 @@ static const struct message WmRestoreMinimizedSeq[] =
     { WM_WINDOWPOSCHANGED, sent|wparam|defwinproc, SWP_FRAMECHANGED|SWP_NOCOPYBITS|SWP_STATECHANGED },
     { WM_MOVE, sent|defwinproc },
     { WM_SIZE, sent|defwinproc },
+    { WM_NCCALCSIZE, sent|wparam|defwinproc|optional, 1 }, /* 32-bit Vista sends it */
+    { WM_NCPAINT, sent|wparam|defwinproc|optional, 1 }, /* 32-bit Vista sends it */
+    { WM_ERASEBKGND, sent|defwinproc|optional }, /* 32-bit Vista sends it */
     { EVENT_OBJECT_LOCATIONCHANGE, winevent_hook|wparam|lparam|winevent_hook_todo, 0, 0 },
+    { EVENT_OBJECT_LOCATIONCHANGE, winevent_hook|wparam|lparam|optional, 0, 0 }, /* 32-bit Vista sends it */
     { EVENT_SYSTEM_MINIMIZEEND, winevent_hook|wparam|lparam|winevent_hook_todo, 0, 0 },
     { WM_NCCALCSIZE, sent|wparam|defwinproc|optional, 1 },
     { WM_NCPAINT, sent|wparam|defwinproc|optional, 1 },
