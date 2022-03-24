@@ -52,19 +52,17 @@ static char *g_endedit_overwrite_ptr;
 static HFONT g_customdraw_font;
 static BOOL g_v6;
 
-#define NUM_MSG_SEQUENCES   3
+#define NUM_MSG_SEQUENCES   4
 #define TREEVIEW_SEQ_INDEX  0
 #define PARENT_SEQ_INDEX    1
 #define PARENT_CD_SEQ_INDEX 2
+#define ITEM_SEQ_INDEX      3
 
 #define expect(expected,got) expect_(__LINE__, expected, got)
 static inline void expect_(unsigned line, DWORD expected, DWORD got)
 {
     ok_(__FILE__, line)(expected == got, "Expected %ld, got %ld\n", expected, got);
 }
-
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-static struct msg_sequence *item_sequence[1];
 
 static void flush_events(void)
 {
@@ -436,7 +434,7 @@ static LRESULT WINAPI TreeviewWndProc(HWND hwnd, UINT message, WPARAM wParam, LP
     if (defwndproc_counter) msg.flags |= defwinproc;
     msg.wParam = wParam;
     msg.lParam = lParam;
-    add_message(sequences, TREEVIEW_SEQ_INDEX, &msg);
+    add_message(TREEVIEW_SEQ_INDEX, &msg);
 
     defwndproc_counter++;
     ret = CallWindowProcA(lpOldProc, hwnd, message, wParam, lParam);
@@ -489,7 +487,7 @@ static void test_fillroot(void)
 
     hTree = create_treeview_control(0);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     fill_tree(hTree);
 
@@ -499,7 +497,7 @@ static void test_fillroot(void)
     AddItem('B');
     ok(hChild != NULL, "failed to set child\n");
     AddItem('.');
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, FillRootSeq, "FillRoot", FALSE);
+    ok_sequence(TREEVIEW_SEQ_INDEX, FillRootSeq, "FillRoot", FALSE);
     ok(!strcmp(sequence, "AB."), "Item creation\n");
 
     /* UMLPad 1.15 depends on this being not -1 (I_IMAGECALLBACK) */
@@ -594,7 +592,7 @@ static void test_callback(void)
     ret = SendMessageA(hTree, TVM_SELECTITEM, TVGN_CARET, 0);
     expect(TRUE, ret);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     tvi.hItem = hRoot;
     tvi.mask = TVIF_STATE;
@@ -603,7 +601,7 @@ static void test_callback(void)
     expect(TRUE, ret);
     ok(tvi.state == INDEXTOSTATEIMAGEMASK(1), "got 0x%x\n", tvi.state);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "no TVN_GETDISPINFO for a state seq", FALSE);
 
     tvi.hItem     = hRoot;
@@ -615,7 +613,7 @@ static void test_callback(void)
     expect(TRUE, ret);
 
     /* ask for item image index through callback - state is also set with state image index */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     tvi.hItem = hRoot;
     tvi.mask = TVIF_IMAGE;
@@ -624,11 +622,11 @@ static void test_callback(void)
     expect(TRUE, ret);
     ok(tvi.state == (INDEXTOSTATEIMAGEMASK(1) | TVIS_FOCUSED), "got 0x%x\n", tvi.state);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_get_dispinfo_seq,
+    ok_sequence(PARENT_SEQ_INDEX, parent_get_dispinfo_seq,
                 "callback for state/overlay image index, noop seq", FALSE);
 
     /* ask for image again and overwrite state to some value in handler */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     g_disp_set_stateimage = TRUE;
     tvi.hItem = hRoot;
@@ -641,7 +639,7 @@ static void test_callback(void)
     ok(tvi.state == (TVIS_FOCUSED | TVIS_SELECTED | INDEXTOSTATEIMAGEMASK(2) | INDEXTOOVERLAYMASK(3)), "got 0x%x\n", tvi.state);
     g_disp_set_stateimage = FALSE;
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_get_dispinfo_seq,
+    ok_sequence(PARENT_SEQ_INDEX, parent_get_dispinfo_seq,
                 "callback for state/overlay image index seq", FALSE);
 
     DestroyWindow(hTree);
@@ -656,7 +654,7 @@ static void test_select(void)
     fill_tree(hTree);
 
     /* root-none select tests */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hTree, TVM_SELECTITEM, TVGN_CARET, 0);
     expect(TRUE, r);
     Clear();
@@ -677,11 +675,11 @@ static void test_select(void)
     expect(TRUE, r);
     AddItem('.');
     ok(!strcmp(sequence, "1(nR)nR23(Rn)Rn45(nR)nR."), "root-none select test\n");
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, rootnone_select_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, rootnone_select_seq,
                 "root-none select seq", FALSE);
 
     /* root-child select tests */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hTree, TVM_SELECTITEM, TVGN_CARET, 0);
     expect(TRUE, r);
 
@@ -703,7 +701,7 @@ static void test_select(void)
     expect(TRUE, r);
     AddItem('.');
     ok(!strcmp(sequence, "1(nR)nR23(RC)RC45(CR)CR."), "root-child select test\n");
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, rootchild_select_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, rootchild_select_seq,
                 "root-child select seq", FALSE);
 
     DestroyWindow(hTree);
@@ -722,7 +720,7 @@ static void test_getitemtext(void)
     hTree = create_treeview_control(0);
     fill_tree(hTree);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* add an item without TVIF_TEXT mask and pszText == NULL */
     ins.hParent = hRoot;
@@ -742,7 +740,7 @@ static void test_getitemtext(void)
     SendMessageA( hTree, TVM_GETITEMA, 0, (LPARAM)&tvi );
     ok(!strcmp(szBuffer, ""), "szBuffer=\"%s\", expected \"\"\n", szBuffer);
     ok(SendMessageA(hTree, TVM_DELETEITEM, 0, (LPARAM)hChild), "DeleteItem failed\n");
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, getitemtext_seq, "get item text seq", FALSE);
+    ok_sequence(TREEVIEW_SEQ_INDEX, getitemtext_seq, "get item text seq", FALSE);
 
     DestroyWindow(hTree);
 }
@@ -759,7 +757,7 @@ static void test_focus(void)
     hTree = create_treeview_control(0);
     fill_tree(hTree);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* This test verifies that when a label is being edited, scrolling
      * the treeview does not cause the label to lose focus. To test
@@ -783,7 +781,7 @@ static void test_focus(void)
     hEdit = (HWND)SendMessageA(hTree, TVM_EDITLABELA, 0, (LPARAM)hChild);
     ScrollWindowEx(hTree, -10, 0, NULL, NULL, NULL, NULL, SW_SCROLLCHILDREN);
     ok(GetFocus() == hEdit, "Edit control should have focus\n");
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, focus_seq, "focus test", TRUE);
+    ok_sequence(TREEVIEW_SEQ_INDEX, focus_seq, "focus test", TRUE);
 
     DestroyWindow(hTree);
 }
@@ -796,7 +794,7 @@ static void test_get_set_bkcolor(void)
     hTree = create_treeview_control(0);
     fill_tree(hTree);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* If the value is -1, the control is using the system color for the background color. */
     crColor = SendMessageA(hTree, TVM_GETBKCOLOR, 0, 0);
@@ -815,7 +813,7 @@ static void test_get_set_bkcolor(void)
     /* Reset the default background */
     SendMessageA(hTree, TVM_SETBKCOLOR, 0, -1);
 
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, test_get_set_bkcolor_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, test_get_set_bkcolor_seq,
         "test get set bkcolor", FALSE);
 
     DestroyWindow(hTree);
@@ -829,7 +827,7 @@ static void test_get_set_imagelist(void)
     hTree = create_treeview_control(0);
     fill_tree(hTree);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Test a NULL HIMAGELIST */
     SendMessageA(hTree, TVM_SETIMAGELIST, TVSIL_NORMAL, 0);
@@ -838,7 +836,7 @@ static void test_get_set_imagelist(void)
 
     /* TODO: Test an actual image list */
 
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, test_get_set_imagelist_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, test_get_set_imagelist_seq,
         "test get imagelist", FALSE);
 
     DestroyWindow(hTree);
@@ -854,7 +852,7 @@ static void test_get_set_indent(void)
     hTree = create_treeview_control(0);
     fill_tree(hTree);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Finding the minimum indent */
     SendMessageA(hTree, TVM_SETINDENT, 0, 0);
@@ -866,7 +864,7 @@ static void test_get_set_indent(void)
     ulIndent = SendMessageA(hTree, TVM_GETINDENT, 0, 0);
     ok(ulIndent == ulMoreThanTwiceMin, "Indent reported as %d, expected %d\n", ulIndent, ulMoreThanTwiceMin);
 
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, test_get_set_indent_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, test_get_set_indent_seq,
         "test get set indent", FALSE);
 
     DestroyWindow(hTree);
@@ -880,13 +878,13 @@ static void test_get_set_insertmark(void)
     hTree = create_treeview_control(0);
     fill_tree(hTree);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     SendMessageA(hTree, TVM_SETINSERTMARKCOLOR, 0, crColor);
     crColor = SendMessageA(hTree, TVM_GETINSERTMARKCOLOR, 0, 0);
     ok(crColor == RGB(0,0,0), "Insert mark color reported as 0x%.8lx, expected 0x00000000\n", crColor);
 
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, test_get_set_insertmarkcolor_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, test_get_set_insertmarkcolor_seq,
         "test get set insertmark color", FALSE);
 
     DestroyWindow(hTree);
@@ -910,7 +908,7 @@ static void test_get_set_item(void)
     ret = SendMessageA(hTree, TVM_SETITEMA, 0, (LPARAM)&tviRoot);
     expect(TRUE, ret);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Test the root item, state is set even when not requested */
     tviRoot.hItem = hRoot;
@@ -939,7 +937,7 @@ static void test_get_set_item(void)
     ret = SendMessageA(hTree, TVM_SETITEMA, 0, (LPARAM)&tviRoot);
     expect(TRUE, ret);
 
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, test_get_set_item_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, test_get_set_item_seq,
         "test get set item", FALSE);
 
     /* get item from a different tree */
@@ -972,7 +970,7 @@ static void test_get_set_itemheight(void)
     hTree = create_treeview_control(0);
     fill_tree(hTree);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Assuming default height to begin with */
     ulOldHeight = SendMessageA(hTree, TVM_GETITEMHEIGHT, 0, 0);
@@ -992,7 +990,7 @@ static void test_get_set_itemheight(void)
     ulNewHeight = SendMessageA(hTree, TVM_GETITEMHEIGHT, 0, 0);
     ok(ulNewHeight == 8, "Uneven height not set properly, reported %d, expected %d\n", ulNewHeight, 8);
 
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, test_get_set_itemheight_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, test_get_set_itemheight_seq,
         "test get set item height", FALSE);
 
     /* without TVS_NONEVENHEIGHT */
@@ -1033,13 +1031,13 @@ static void test_get_set_scrolltime(void)
     hTree = create_treeview_control(0);
     fill_tree(hTree);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     SendMessageA(hTree, TVM_SETSCROLLTIME, ulExpectedTime, 0);
     ulTime = SendMessageA(hTree, TVM_GETSCROLLTIME, 0, 0);
     ok(ulTime == ulExpectedTime, "Scroll time reported as %d, expected %d\n", ulTime, ulExpectedTime);
 
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, test_get_set_scrolltime_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, test_get_set_scrolltime_seq,
         "test get set scroll time", FALSE);
 
     DestroyWindow(hTree);
@@ -1054,7 +1052,7 @@ static void test_get_set_textcolor(void)
     hTree = create_treeview_control(0);
     fill_tree(hTree);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     crColor = SendMessageA(hTree, TVM_GETTEXTCOLOR, 0, 0);
     ok(crColor == ~0u, "Default text color reported as 0x%.8lx\n", crColor);
@@ -1072,7 +1070,7 @@ static void test_get_set_textcolor(void)
     /* Reset the default text color */
     SendMessageA(hTree, TVM_SETTEXTCOLOR, 0, CLR_NONE);
 
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, test_get_set_textcolor_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, test_get_set_textcolor_seq,
         "test get set text color", FALSE);
 
     DestroyWindow(hTree);
@@ -1179,7 +1177,7 @@ static void test_get_set_tooltips(void)
     hTree = create_treeview_control(0);
     fill_tree(hTree);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* show even WS_POPUP treeview don't send NM_TOOLTIPSCREATED */
     hwnd = CreateWindowA(WC_TREEVIEWA, NULL, WS_POPUP|WS_VISIBLE, 0, 0, 100, 100,
@@ -1193,7 +1191,7 @@ static void test_get_set_tooltips(void)
     hwnd = (HWND)SendMessageA(hTree, TVM_GETTOOLTIPS, 0, 0);
     ok(hwnd == NULL, "Unexpected tooltip window %p.\n", hwnd);
 
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, test_get_set_tooltips_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, test_get_set_tooltips_seq,
         "test get set tooltips", TRUE);
 
     DestroyWindow(hTree);
@@ -1214,7 +1212,7 @@ static void test_get_set_unicodeformat(void)
     bPreviousSetting = SendMessageA(hTree, TVM_GETUNICODEFORMAT, 0, 0);
     ok(bPreviousSetting == FALSE, "Format should be ANSI.\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Set to Unicode */
     bPreviousSetting = SendMessageA(hTree, TVM_SETUNICODEFORMAT, 1, 0);
@@ -1229,7 +1227,7 @@ static void test_get_set_unicodeformat(void)
     /* Revert to original setting */
     SendMessageA(hTree, TVM_SETUNICODEFORMAT, bPreviousSetting, 0);
 
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, test_get_set_unicodeformat_seq,
+    ok_sequence(TREEVIEW_SEQ_INDEX, test_get_set_unicodeformat_seq,
         "test get set unicode format", FALSE);
 
     DestroyWindow(hTree);
@@ -1261,7 +1259,7 @@ static LRESULT CALLBACK parent_wnd_proc(HWND hWnd, UINT message, WPARAM wParam, 
         message != WM_GETICON &&
         message != WM_DEVICECHANGE)
     {
-        add_message(sequences, PARENT_SEQ_INDEX, &msg);
+        add_message(PARENT_SEQ_INDEX, &msg);
     }
 
     switch(message) {
@@ -1404,7 +1402,7 @@ static LRESULT CALLBACK parent_wnd_proc(HWND hWnd, UINT message, WPARAM wParam, 
 
                 memset(&item, 0, sizeof(item));
                 item.lParam = (LPARAM)pTreeView->itemOld.hItem;
-                add_message(item_sequence, 0, &item);
+                add_message(ITEM_SEQ_INDEX, &item);
 
                 break;
             }
@@ -1416,7 +1414,7 @@ static LRESULT CALLBACK parent_wnd_proc(HWND hWnd, UINT message, WPARAM wParam, 
 
                 msg.flags |= custdraw;
                 msg.stage = nmcd->nmcd.dwDrawStage;
-                add_message(sequences, PARENT_CD_SEQ_INDEX, &msg);
+                add_message(PARENT_CD_SEQ_INDEX, &msg);
 
                 switch (msg.stage)
                 {
@@ -1839,14 +1837,14 @@ static void test_expandnotify(void)
     ret = SendMessageA(hTree, TVM_SELECTITEM, TVGN_CARET, (LPARAM)hRoot);
     expect(TRUE, ret);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, TVM_EXPAND, TVE_COLLAPSE, (LPARAM)hRoot);
     expect(FALSE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "no collapse notifications", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "no collapse notifications", FALSE);
 
     g_get_from_expand = TRUE;
     /* expand */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     g_item_expanding.state = 0xdeadbeef;
     g_item_expanded.state = 0xdeadbeef;
     ret = SendMessageA(hTree, TVM_EXPAND, TVE_EXPAND, (LPARAM)hRoot);
@@ -1855,7 +1853,7 @@ static void test_expandnotify(void)
        g_item_expanding.state);
     ok(g_item_expanded.state == (TVIS_SELECTED|TVIS_EXPANDED), "got state on TVN_ITEMEXPANDED 0x%08x\n",
        g_item_expanded.state);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_expand_seq, "expand notifications", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_expand_seq, "expand notifications", FALSE);
     g_get_from_expand = FALSE;
 
     /* check that it's expanded */
@@ -1865,7 +1863,7 @@ static void test_expandnotify(void)
     ok((item.state & TVIS_EXPANDED) == TVIS_EXPANDED, "expected expanded\n");
 
     /* collapse */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, TVM_EXPAND, TVE_COLLAPSE, (LPARAM)hRoot);
     expect(TRUE, ret);
     item.state = TVIS_EXPANDED;
@@ -1874,13 +1872,13 @@ static void test_expandnotify(void)
     ok((item.state & TVIS_EXPANDED) == 0, "expected collapsed\n");
     /* all further collapse/expand attempts won't produce any notifications,
        the only way is to reset with all children removed */
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "collapse after expand notifications", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "collapse after expand notifications", FALSE);
 
     /* try to toggle child that doesn't have children itself */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, TVM_EXPAND, TVE_TOGGLE, (LPARAM)hChild);
     expect(FALSE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "toggle node without children", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "toggle node without children", FALSE);
 
     DestroyWindow(hTree);
 
@@ -1898,16 +1896,16 @@ static void test_expandnotify(void)
     hTree = create_treeview_control(0);
     fill_tree(hTree);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, TVM_EXPAND, TVE_TOGGLE, (LPARAM)hRoot);
     expect(TRUE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_expand_seq, "toggle node (expand)", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_expand_seq, "toggle node (expand)", FALSE);
 
     /* toggle again - no notifications */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, TVM_EXPAND, TVE_TOGGLE, (LPARAM)hRoot);
     expect(TRUE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "toggle node (collapse)", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "toggle node (collapse)", FALSE);
 
     DestroyWindow(hTree);
 
@@ -1920,55 +1918,55 @@ static void test_expandnotify(void)
     expect(TRUE, ret);
 
     g_get_from_expand = TRUE;
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, WM_KEYDOWN, VK_ADD, 0);
     expect(FALSE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_expand_kb_seq, "expand node", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_expand_kb_seq, "expand node", FALSE);
     ok(g_item_expanding.state == TVIS_SELECTED, "got state on TVN_ITEMEXPANDING 0x%08x\n",
        g_item_expanding.state);
     ok(g_item_expanded.state == (TVIS_SELECTED|TVIS_EXPANDED), "got state on TVN_ITEMEXPANDED 0x%08x\n",
        g_item_expanded.state);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, WM_KEYDOWN, VK_ADD, 0);
     expect(FALSE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_expand_kb_seq, "expand node again", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_expand_kb_seq, "expand node again", FALSE);
     ok(g_item_expanding.state == (TVIS_SELECTED|TVIS_EXPANDED|TVIS_EXPANDEDONCE), "got state on TVN_ITEMEXPANDING 0x%08x\n",
        g_item_expanding.state);
     ok(g_item_expanded.state == (TVIS_SELECTED|TVIS_EXPANDED|TVIS_EXPANDEDONCE), "got state on TVN_ITEMEXPANDED 0x%08x\n",
        g_item_expanded.state);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, WM_KEYDOWN, VK_SUBTRACT, 0);
     expect(FALSE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_expand_kb_seq, "collapse node", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_expand_kb_seq, "collapse node", FALSE);
     ok(g_item_expanding.state == (TVIS_SELECTED|TVIS_EXPANDED|TVIS_EXPANDEDONCE), "got state on TVN_ITEMEXPANDING 0x%08x\n",
        g_item_expanding.state);
     ok(g_item_expanded.state == (TVIS_SELECTED|TVIS_EXPANDEDONCE), "got state on TVN_ITEMEXPANDED 0x%08x\n",
        g_item_expanded.state);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, WM_KEYDOWN, VK_SUBTRACT, 0);
     expect(FALSE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_collapse_2nd_kb_seq, "collapse node again", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_collapse_2nd_kb_seq, "collapse node again", FALSE);
     ok(g_item_expanding.state == (TVIS_SELECTED|TVIS_EXPANDEDONCE), "got state on TVN_ITEMEXPANDING 0x%08x\n",
        g_item_expanding.state);
     g_get_from_expand = FALSE;
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, WM_KEYDOWN, VK_ADD, 0);
     expect(FALSE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_expand_kb_seq, "expand node", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_expand_kb_seq, "expand node", FALSE);
 
     /* go to child */
     ret = SendMessageA(hTree, WM_KEYDOWN, VK_RIGHT, 0);
     expect(FALSE, ret);
 
     /* try to expand child that doesn't have children itself */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, WM_KEYDOWN, VK_ADD, 0);
     expect(FALSE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_expand_empty_kb_seq, "expand node with no children", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_expand_empty_kb_seq, "expand node with no children", FALSE);
 
     /* stay on current selection and set non-zero children count */
     hitem = (HTREEITEM)SendMessageA(hTree, TVM_GETNEXTITEM, TVGN_CARET, 0);
@@ -1981,10 +1979,10 @@ static void test_expandnotify(void)
     ret = SendMessageA(hTree, TVM_SETITEMA, 0, (LPARAM)&item);
     expect(TRUE, ret);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hTree, WM_KEYDOWN, VK_ADD, 0);
     expect(FALSE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_collapse_2nd_kb_seq, "expand node with children", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_collapse_2nd_kb_seq, "expand node with children", FALSE);
 
     DestroyWindow(hTree);
 }
@@ -2104,11 +2102,11 @@ static void test_TVS_SINGLEEXPAND(void)
 
     for (i = 0; i < ARRAY_SIZE(sequence_tests); i++)
     {
-        flush_sequences(sequences, NUM_MSG_SEQUENCES);
+        flush_sequences(NUM_MSG_SEQUENCES);
         ret = SendMessageA(hTree, TVM_SELECTITEM, TVGN_CARET, (LPARAM)(*sequence_tests[i].select));
         ok(ret, "got %d\n", ret);
         sprintf(context, "singleexpand notifications %d", i);
-        ok_sequence(sequences, PARENT_SEQ_INDEX, sequence_tests[i].sequence, context, FALSE);
+        ok_sequence(PARENT_SEQ_INDEX, sequence_tests[i].sequence, context, FALSE);
     }
 
     for (i = 0; i < ARRAY_SIZE(items); i++)
@@ -2182,14 +2180,14 @@ static void test_delete_items(void)
     fill_tree(hTree);
 
     /* check delete order */
-    flush_sequences(item_sequence, 1);
+    flush_sequences(ITEM_SEQ_INDEX);
     ret = SendMessageA(hTree, TVM_DELETEITEM, 0, 0);
     ok(ret == TRUE, "got %d\n", ret);
 
-    msg = item_sequence[0]->sequence;
-    ok(item_sequence[0]->count == 2, "expected 2 items, got %d\n", item_sequence[0]->count);
+    msg = sequences[ITEM_SEQ_INDEX]->sequence;
+    ok(sequences[ITEM_SEQ_INDEX]->count == 2, "expected 2 items, got %d\n", sequences[ITEM_SEQ_INDEX]->count);
 
-    if (item_sequence[0]->count == 2)
+    if (sequences[ITEM_SEQ_INDEX]->count == 2)
     {
       ok(msg[0].lParam == (LPARAM)hChild, "expected %p, got 0x%Ix\n", hChild, msg[0].lParam);
       ok(msg[1].lParam == (LPARAM)hRoot, "expected %p, got 0x%Ix\n", hRoot, msg[1].lParam);
@@ -2665,10 +2663,10 @@ static void test_customdraw(void)
     SystemParametersInfoA(SPI_GETICONTITLELOGFONT, sizeof(lf), &lf, 0);
     lf.lfHeight *= 2;
     g_customdraw_font = CreateFontIndirectA(&lf);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
-    ok_sequence(sequences, PARENT_CD_SEQ_INDEX, parent_cd_seq, "custom draw notifications", FALSE);
+    ok_sequence(PARENT_CD_SEQ_INDEX, parent_cd_seq, "custom draw notifications", FALSE);
     DeleteObject(g_customdraw_font);
     g_customdraw_font = NULL;
 
@@ -2691,9 +2689,9 @@ static void test_WM_KEYDOWN(void)
     hRoot = TreeView_InsertItemA(hwnd, &ins);
     ok(hRoot != NULL, "got %p\n", hRoot);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     SendMessageA(hwnd, WM_KEYDOWN, VK_RETURN, 0);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_vk_return_seq, "WM_KEYDOWN/VK_RETURN parent notification", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_vk_return_seq, "WM_KEYDOWN/VK_RETURN parent notification", TRUE);
 
     DestroyWindow(hwnd);
 }
@@ -2940,15 +2938,15 @@ static void test_right_click(void)
     SetCursorPos(pt.x, pt.y);
 
     flush_events();
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     PostMessageA(hTree, WM_RBUTTONDOWN, MK_RBUTTON, MAKELPARAM(pt.x, pt.y));
     PostMessageA(hTree, WM_RBUTTONUP, 0, MAKELPARAM(pt.x, pt.y));
 
     flush_events();
 
-    ok_sequence(sequences, TREEVIEW_SEQ_INDEX, test_right_click_seq, "right click sequence", FALSE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_right_click_seq, "parent right click sequence", FALSE);
+    ok_sequence(TREEVIEW_SEQ_INDEX, test_right_click_seq, "right click sequence", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_right_click_seq, "parent right click sequence", FALSE);
 
     selected = (HTREEITEM)SendMessageA(hTree, TVM_GETNEXTITEM, TVGN_CARET, 0);
     ok(selected == hChild, "child item should still be selected\n");
@@ -2983,9 +2981,8 @@ START_TEST(treeview)
     iccex.dwICC  = ICC_TREEVIEW_CLASSES;
     pInitCommonControlsEx(&iccex);
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
-    init_msg_sequences(item_sequence, 1);
-  
+    init_msg_sequences(NUM_MSG_SEQUENCES);
+
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;

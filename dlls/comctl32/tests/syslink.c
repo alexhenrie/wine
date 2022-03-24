@@ -31,8 +31,6 @@
 
 static HWND hWndParent;
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCE];
-
 static const struct message empty_wnd_seq[] = {
     {0}
 };
@@ -96,7 +94,7 @@ static LRESULT WINAPI parent_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LP
         if (defwndproc_counter) msg.flags |= defwinproc;
         msg.wParam = wParam;
         msg.lParam = lParam;
-        add_message(sequences, PARENT_SEQ_INDEX, &msg);
+        add_message(PARENT_SEQ_INDEX, &msg);
     }
 
     defwndproc_counter++;
@@ -148,7 +146,7 @@ static LRESULT WINAPI syslink_subclass_proc(HWND hwnd, UINT message, WPARAM wPar
     if (defwndproc_counter) msg.flags |= defwinproc;
     msg.wParam = wParam;
     msg.lParam = lParam;
-    add_message(sequences, SYSLINK_SEQ_INDEX, &msg);
+    add_message(SYSLINK_SEQ_INDEX, &msg);
 
     defwndproc_counter++;
     ret = CallWindowProcW(syslink_oldproc, hwnd, message, wParam, lParam);
@@ -182,21 +180,21 @@ static void test_create_syslink(void)
     LONG oldstyle;
 
     /* Create an invisible SysLink control */
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
     hWndSysLink = create_syslink(WS_CHILD | WS_TABSTOP, hWndParent);
     ok(hWndSysLink != NULL, "Expected non NULL value (le %lu)\n", GetLastError());
     flush_events();
-    ok_sequence(sequences, SYSLINK_SEQ_INDEX, empty_wnd_seq, "create SysLink", FALSE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_create_syslink_wnd_seq, "create SysLink (parent)", TRUE);
+    ok_sequence(SYSLINK_SEQ_INDEX, empty_wnd_seq, "create SysLink", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_create_syslink_wnd_seq, "create SysLink (parent)", TRUE);
 
     /* Make the SysLink control visible */
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
     oldstyle = GetWindowLongA(hWndSysLink, GWL_STYLE);
     SetWindowLongA(hWndSysLink, GWL_STYLE, oldstyle | WS_VISIBLE);
     RedrawWindow(hWndSysLink, NULL, NULL, RDW_INVALIDATE);
     flush_events();
-    ok_sequence(sequences, SYSLINK_SEQ_INDEX, visible_syslink_wnd_seq, "visible SysLink", TRUE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_visible_syslink_wnd_seq, "visible SysLink (parent)", TRUE);
+    ok_sequence(SYSLINK_SEQ_INDEX, visible_syslink_wnd_seq, "visible SysLink", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_visible_syslink_wnd_seq, "visible SysLink (parent)", TRUE);
 
     DestroyWindow(hWndSysLink);
 }
@@ -256,7 +254,7 @@ START_TEST(syslink)
     GetCursorPos(&orig_pos);
     SetCursorPos(400, 400);
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCE);
+    init_msg_sequences(NUM_MSG_SEQUENCE);
 
     /* Create parent window */
     hWndParent = create_parent_window();

@@ -42,8 +42,6 @@ enum message_seq_index
     wine_dbgstr_rect(&r), _left, _top, _right, _bottom);
 
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 static HWND hComboExParentWnd, hMainWnd;
 static HINSTANCE hMainHinst;
 static const char ComboExTestClass[] = "ComboExTestClass";
@@ -126,7 +124,7 @@ static LRESULT WINAPI editbox_subclass_proc(HWND hwnd, UINT message, WPARAM wPar
         message != WM_GETICON &&
         message != WM_DEVICECHANGE)
     {
-        add_message(sequences, EDITBOX_SEQ_INDEX, &msg);
+        add_message(EDITBOX_SEQ_INDEX, &msg);
     }
 
     defwndproc_counter++;
@@ -463,7 +461,7 @@ static LRESULT ComboExTestOnNotify(HWND hWnd, UINT message, WPARAM wParam, LPARA
     msg.lParam = lParam;
     if (hdr) msg.id = hdr->code;
 
-    add_message(sequences, PARENT_SEQ_INDEX, &msg);
+    add_message(PARENT_SEQ_INDEX, &msg);
 
     switch (hdr->code)
     {
@@ -635,7 +633,7 @@ static void test_comboex_get_set_item(void)
 
     subclass_editbox(hComboEx);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.mask = CBEIF_TEXT;
@@ -644,7 +642,7 @@ static void test_comboex_get_set_item(void)
     ret = SendMessageA(hComboEx, CBEM_SETITEMA, 0, (LPARAM)&item);
     ok(ret == 1, "Unexpected return value %ld.\n", ret);
 
-    ok_sequence(sequences, EDITBOX_SEQ_INDEX, test_setitem_edit_seq, "set item data for edit", FALSE);
+    ok_sequence(EDITBOX_SEQ_INDEX, test_setitem_edit_seq, "set item data for edit", FALSE);
 
     /* get/set lParam */
     item.mask = CBEIF_LPARAM;
@@ -1468,19 +1466,19 @@ static void test_comboex_CBEN_GETDISPINFO(void)
 
     for (i = 0; i < ARRAY_SIZE(test_masks); ++i)
     {
-        flush_sequences(sequences, NUM_MSG_SEQUENCES);
+        flush_sequences(NUM_MSG_SEQUENCES);
 
         memset(&item, 0, sizeof(item));
         item.mask = test_masks[i];
         res = SendMessageA(combo, CBEM_GETITEMA, 0, (LPARAM)&item);
         ok(res == 1, "Unexpected return value %lu.\n", res);
 
-        ok_sequence(sequences, PARENT_SEQ_INDEX, getdisp_parent_seq, "Get disp mask seq", TRUE);
+        ok_sequence(PARENT_SEQ_INDEX, getdisp_parent_seq, "Get disp mask seq", TRUE);
     }
 
     di_context.set_CBEIF_DI_SETITEM = TRUE;
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.mask = CBEIF_IMAGE;
@@ -1490,15 +1488,15 @@ static void test_comboex_CBEN_GETDISPINFO(void)
     todo_wine
     ok(di_context.mask == CBEIF_IMAGE, "Unexpected mask %#x.\n", di_context.mask);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, getdisp_parent_seq, "Get disp DI_SETITEM seq", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, getdisp_parent_seq, "Get disp DI_SETITEM seq", TRUE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.mask = CBEIF_IMAGE;
     res = SendMessageA(combo, CBEM_GETITEMA, 0, (LPARAM)&item);
     ok(res == 1, "Unexpected return value %lu.\n", res);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "Get disp after DI_SETITEM seq", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "Get disp after DI_SETITEM seq", FALSE);
 
     /* Request two fields, one was set. */
     memset(&item, 0, sizeof(item));
@@ -1524,7 +1522,7 @@ START_TEST(combo)
     if (!init())
         return;
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     /* ComboBoxEx32 tests. */
     test_comboex();

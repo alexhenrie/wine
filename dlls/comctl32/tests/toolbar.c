@@ -53,8 +53,6 @@ static HTHEME (WINAPI *pOpenThemeData)(HWND, LPCWSTR);
 
 static BOOL is_theme_active;
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 static HWND hMainWnd;
 static BOOL g_fBlockHotItemChange;
 static BOOL g_fReceivedHotItemChange;
@@ -399,7 +397,7 @@ static LRESULT CALLBACK parent_wnd_proc(HWND hWnd, UINT message, WPARAM wParam, 
         message != WM_GETICON &&
         message != WM_DEVICECHANGE)
     {
-        add_message(sequences, PARENT_SEQ_INDEX, &msg);
+        add_message(PARENT_SEQ_INDEX, &msg);
     }
 
     switch (message)
@@ -2086,9 +2084,9 @@ static void test_tooltip(void)
 
     SendMessageA(hToolbar, CCM_SETUNICODEFORMAT, FALSE, 0);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     SendMessageA(hToolbar, WM_NOTIFY, 0, (LPARAM)&nmtti);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, ttgetdispinfo_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, ttgetdispinfo_parent_seq,
                 "dispinfo from tooltip", FALSE);
 
     g_ResetDispTextPtr = TRUE;
@@ -2497,10 +2495,10 @@ static void test_save(void)
     rebuild_toolbar_with_buttons( &wnd );
     SendMessageW(wnd, TB_ADDBUTTONSW, ARRAY_SIZE(more_btns), (LPARAM)more_btns);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     res = SendMessageW( wnd, TB_SAVERESTOREW, TRUE, (LPARAM)&params );
     ok( res, "saving failed\n" );
-    ok_sequence(sequences, PARENT_SEQ_INDEX, save_parent_seq, "save", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, save_parent_seq, "save", FALSE);
     DestroyWindow( wnd );
 
     res = RegOpenKeyW( HKEY_CURRENT_USER, L"Software\\Wine\\WineTest", &key );
@@ -2516,10 +2514,10 @@ static void test_save(void)
     wnd = NULL;
     rebuild_toolbar( &wnd );
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     res = SendMessageW( wnd, TB_SAVERESTOREW, FALSE, (LPARAM)&params );
     ok( res, "restoring failed\n" );
-    ok_sequence(sequences, PARENT_SEQ_INDEX, restore_parent_seq, "restore", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, restore_parent_seq, "restore", FALSE);
     count = SendMessageW( wnd, TB_BUTTONCOUNT, 0, 0 );
     ok( count == ARRAY_SIZE(expect_btns), "got %ld\n", count );
 
@@ -2803,7 +2801,7 @@ START_TEST(toolbar)
     MSG msg;
     RECT rc;
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
     init_functions();
 
     if (pIsThemeActive)

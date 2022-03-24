@@ -45,8 +45,6 @@ static BOOL (WINAPI *pImageList_Destroy)(HIMAGELIST);
 #define PARENT_CD_SEQ_INDEX 1
 #define NUM_MSG_SEQUENCES   2
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 struct wndclass_redirect_data
 {
     ULONG size;
@@ -158,7 +156,7 @@ static LRESULT CALLBACK button_subclass_proc(HWND hwnd, UINT message, WPARAM wPa
         if (defwndproc_counter) msg.flags |= defwinproc;
         msg.wParam = wParam;
         msg.lParam = lParam;
-        add_message(sequences, COMBINED_SEQ_INDEX, &msg);
+        add_message(COMBINED_SEQ_INDEX, &msg);
     }
 
     if (message == WM_NCDESTROY)
@@ -221,7 +219,7 @@ static LRESULT WINAPI test_parent_wndproc(HWND hwnd, UINT message, WPARAM wParam
         if (beginpaint_counter) msg.flags |= beginpaint;
         msg.wParam = wParam;
         msg.lParam = lParam;
-        add_message(sequences, COMBINED_SEQ_INDEX, &msg);
+        add_message(COMBINED_SEQ_INDEX, &msg);
     }
 
     if (message == WM_NOTIFY && cd->hdr.code == NM_CUSTOMDRAW && test_cd.line)
@@ -250,7 +248,7 @@ static LRESULT WINAPI test_parent_wndproc(HWND hwnd, UINT message, WPARAM wParam
         msg.id = NM_CUSTOMDRAW;
         msg.stage = cd->dwDrawStage;
         if (cd->hdc == cd_first_hdc)
-            add_message(sequences, PARENT_CD_SEQ_INDEX, &msg);
+            add_message(PARENT_CD_SEQ_INDEX, &msg);
 
         ret = test_cd.ret;
         switch (msg.stage)
@@ -290,7 +288,7 @@ static LRESULT WINAPI test_parent_wndproc(HWND hwnd, UINT message, WPARAM wParam
         msg.wParam = wParam;
         msg.lParam = lParam;
         msg.id = BCN_DROPDOWN;
-        add_message(sequences, COMBINED_SEQ_INDEX, &msg);
+        add_message(COMBINED_SEQ_INDEX, &msg);
         return 0;
     }
 
@@ -757,7 +755,7 @@ static void test_button_messages(void)
 
 #define check_cd_seq(type, context) do { \
         if (button[i].type != cd_seq_optional || !test_cd.empty) \
-            ok_sequence(sequences, PARENT_CD_SEQ_INDEX, cd_seq, "[CustomDraw] " context, FALSE); \
+            ok_sequence(PARENT_CD_SEQ_INDEX, cd_seq, "[CustomDraw] " context, FALSE); \
     } while(0)
 
     for (i = 0; i < ARRAY_SIZE(button); i++)
@@ -796,7 +794,7 @@ static void test_button_messages(void)
         flush_events();
         SetFocus(0);
         cd_seq = (button[i].cd_setfocus_type == cd_seq_empty) ? empty_cd_seq : pre_pre_cd_seq;
-        flush_sequences(sequences, NUM_MSG_SEQUENCES);
+        flush_sequences(NUM_MSG_SEQUENCES);
         set_test_cd_ret(CDRF_DODEFAULT);
         set_test_cd_state(CDIS_FOCUS);
 
@@ -804,14 +802,14 @@ static void test_button_messages(void)
         SetFocus(hwnd);
         SendMessageA(hwnd, WM_APP, 0, 0); /* place a separator mark here */
         while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
-        ok_sequence(sequences, COMBINED_SEQ_INDEX, button[i].setfocus, "SetFocus(hwnd) on a button", FALSE);
+        ok_sequence(COMBINED_SEQ_INDEX, button[i].setfocus, "SetFocus(hwnd) on a button", FALSE);
         check_cd_seq(cd_setfocus_type, "SetFocus(hwnd)");
 
         set_test_cd_state(0);
         SetFocus(0);
         SendMessageA(hwnd, WM_APP, 0, 0); /* place a separator mark here */
         while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
-        ok_sequence(sequences, COMBINED_SEQ_INDEX, button[i].killfocus, "SetFocus(0) on a button", FALSE);
+        ok_sequence(COMBINED_SEQ_INDEX, button[i].killfocus, "SetFocus(0) on a button", FALSE);
         check_cd_seq(cd_setfocus_type, "SetFocus(0)");
         ok(GetFocus() == 0, "expected focus 0, got %p\n", GetFocus());
 
@@ -822,7 +820,7 @@ static void test_button_messages(void)
         SendMessageA(hwnd, WM_APP, 0, 0); /* place a separator mark here */
         while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
         todo = button[i].style == BS_OWNERDRAW;
-        ok_sequence(sequences, COMBINED_SEQ_INDEX, button[i].setstyle, "BM_SETSTYLE on a button", todo);
+        ok_sequence(COMBINED_SEQ_INDEX, button[i].setstyle, "BM_SETSTYLE on a button", todo);
         check_cd_seq(cd_setstyle_type, "BM_SETSTYLE");
 
         style = GetWindowLongA(hwnd, GWL_STYLE);
@@ -834,13 +832,13 @@ static void test_button_messages(void)
         ok(state == 0, "expected state 0, got %04lx\n", state);
 
         cd_seq = (button[i].cd_setstate_type == cd_seq_empty) ? empty_cd_seq : pre_pre_cd_seq;
-        flush_sequences(sequences, NUM_MSG_SEQUENCES);
+        flush_sequences(NUM_MSG_SEQUENCES);
         set_test_cd_state(CDIS_SELECTED);
 
         SendMessageA(hwnd, BM_SETSTATE, TRUE, 0);
         SendMessageA(hwnd, WM_APP, 0, 0); /* place a separator mark here */
         while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
-        ok_sequence(sequences, COMBINED_SEQ_INDEX, button[i].setstate, "BM_SETSTATE/TRUE on a button", FALSE);
+        ok_sequence(COMBINED_SEQ_INDEX, button[i].setstate, "BM_SETSTATE/TRUE on a button", FALSE);
         check_cd_seq(cd_setstate_type, "BM_SETSTATE/TRUE");
 
         state = SendMessageA(hwnd, BM_GETSTATE, 0, 0);
@@ -850,13 +848,13 @@ static void test_button_messages(void)
         style &= ~(WS_CHILD | BS_NOTIFY | WS_VISIBLE);
         ok(style == button[i].style, "expected style %04lx got %04lx\n", button[i].style, style);
 
-        flush_sequences(sequences, NUM_MSG_SEQUENCES);
+        flush_sequences(NUM_MSG_SEQUENCES);
         set_test_cd_state(0);
 
         SendMessageA(hwnd, BM_SETSTATE, FALSE, 0);
         SendMessageA(hwnd, WM_APP, 0, 0); /* place a separator mark here */
         while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
-        ok_sequence(sequences, COMBINED_SEQ_INDEX, button[i].clearstate, "BM_SETSTATE/FALSE on a button", FALSE);
+        ok_sequence(COMBINED_SEQ_INDEX, button[i].clearstate, "BM_SETSTATE/FALSE on a button", FALSE);
         check_cd_seq(cd_setstate_type, "BM_SETSTATE/FALSE");
 
         state = SendMessageA(hwnd, BM_GETSTATE, 0, 0);
@@ -870,7 +868,7 @@ static void test_button_messages(void)
         ok(state == BST_UNCHECKED, "expected BST_UNCHECKED, got %04lx\n", state);
 
         cd_seq = (button[i].cd_setcheck_type == cd_seq_empty) ? empty_cd_seq : pre_pre_cd_seq;
-        flush_sequences(sequences, NUM_MSG_SEQUENCES);
+        flush_sequences(NUM_MSG_SEQUENCES);
         set_test_cd_state(0);
 
         if (button[i].style == BS_RADIOBUTTON ||
@@ -884,7 +882,7 @@ static void test_button_messages(void)
         SendMessageA(hwnd, BM_SETCHECK, BST_UNCHECKED, 0);
         SendMessageA(hwnd, WM_APP, 0, 0); /* place a separator mark here */
         while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
-        ok_sequence(sequences, COMBINED_SEQ_INDEX, seq, "BM_SETCHECK on a button", FALSE);
+        ok_sequence(COMBINED_SEQ_INDEX, seq, "BM_SETCHECK on a button", FALSE);
         check_cd_seq(cd_setcheck_type, "BM_SETCHECK");
 
         state = SendMessageA(hwnd, BM_GETCHECK, 0, 0);
@@ -894,13 +892,13 @@ static void test_button_messages(void)
         style &= ~(WS_CHILD | BS_NOTIFY | WS_VISIBLE);
         ok(style == button[i].style, "expected style %04lx got %04lx\n", button[i].style, style);
 
-        flush_sequences(sequences, NUM_MSG_SEQUENCES);
+        flush_sequences(NUM_MSG_SEQUENCES);
         set_test_cd_state(0);
 
         SendMessageA(hwnd, BM_SETCHECK, BST_CHECKED, 0);
         SendMessageA(hwnd, WM_APP, 0, 0); /* place a separator mark here */
         while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
-        ok_sequence(sequences, COMBINED_SEQ_INDEX, button[i].setcheck, "BM_SETCHECK on a button", FALSE);
+        ok_sequence(COMBINED_SEQ_INDEX, button[i].setcheck, "BM_SETCHECK on a button", FALSE);
         check_cd_seq(cd_setcheck_type, "BM_SETCHECK");
 
         state = SendMessageA(hwnd, BM_GETCHECK, 0, 0);
@@ -978,11 +976,11 @@ static void test_button_messages(void)
                 set_test_cd_ret(ret[k].val);
                 set_test_cd_state(CDIS_FOCUS);
                 SetFocus(hwnd);
-                flush_sequences(sequences, NUM_MSG_SEQUENCES);
+                flush_sequences(NUM_MSG_SEQUENCES);
 
                 while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
                 if (button[i].cd_setfocus_type != cd_seq_optional || !test_cd.empty)
-                    ok_sequence(sequences, PARENT_CD_SEQ_INDEX, ret[k].seq, ret[k].context, FALSE);
+                    ok_sequence(PARENT_CD_SEQ_INDEX, ret[k].seq, ret[k].context, FALSE);
             }
         }
 
@@ -991,11 +989,11 @@ static void test_button_messages(void)
         if (!broken(LOBYTE(LOWORD(GetVersion())) < 6))  /* not available pre-Vista */
         {
             /* Send down arrow key to make the buttons send the drop down notification */
-            flush_sequences(sequences, NUM_MSG_SEQUENCES);
+            flush_sequences(NUM_MSG_SEQUENCES);
             SendMessageW(hwnd, WM_KEYDOWN, VK_DOWN, 0);
             SendMessageW(hwnd, WM_KEYUP, VK_DOWN, 0xc0000000);
             while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
-            ok_sequence(sequences, COMBINED_SEQ_INDEX, bcn_dropdown_seq, "BCN_DROPDOWN from the button", FALSE);
+            ok_sequence(COMBINED_SEQ_INDEX, bcn_dropdown_seq, "BCN_DROPDOWN from the button", FALSE);
         }
 
         DestroyWindow(hwnd);
@@ -1013,19 +1011,19 @@ static void test_button_messages(void)
 
     SetActiveWindow(hwnd);
     SetFocus(0);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     SendMessageA(hwnd, WM_LBUTTONDOWN, 0, 0);
-    ok_sequence(sequences, COMBINED_SEQ_INDEX, lbuttondown_seq, "WM_LBUTTONDOWN on a button", FALSE);
+    ok_sequence(COMBINED_SEQ_INDEX, lbuttondown_seq, "WM_LBUTTONDOWN on a button", FALSE);
 
     SendMessageA(hwnd, WM_LBUTTONUP, 0, 0);
-    ok_sequence(sequences, COMBINED_SEQ_INDEX, lbuttonup_seq, "WM_LBUTTONUP on a button", TRUE);
+    ok_sequence(COMBINED_SEQ_INDEX, lbuttonup_seq, "WM_LBUTTONUP on a button", TRUE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     zfont = GetStockObject(SYSTEM_FONT);
     SendMessageA(hwnd, WM_SETFONT, (WPARAM)zfont, TRUE);
     UpdateWindow(hwnd);
-    ok_sequence(sequences, COMBINED_SEQ_INDEX, setfont_seq, "WM_SETFONT on a button", FALSE);
+    ok_sequence(COMBINED_SEQ_INDEX, setfont_seq, "WM_SETFONT on a button", FALSE);
 
     DestroyWindow(hwnd);
 }
@@ -2395,7 +2393,7 @@ START_TEST(button)
     register_parent_class();
 
     init_functions();
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     test_button_class();
     test_button_messages();

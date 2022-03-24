@@ -39,8 +39,6 @@ enum seq_index
     NUM_MSG_SEQUENCES
 };
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 /* encoded MEASUREITEMSTRUCT into a WPARAM */
 typedef struct
 {
@@ -118,7 +116,7 @@ static LRESULT WINAPI listbox_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, L
             if (defwndproc_counter) msg.flags |= defwinproc;
             msg.wParam = wParam;
             msg.lParam = lParam;
-            add_message(sequences, LB_SEQ_INDEX, &msg);
+            add_message(LB_SEQ_INDEX, &msg);
     }
 
     defwndproc_counter++;
@@ -279,13 +277,13 @@ static void run_test(DWORD style, const struct listbox_test test)
     ok(count == 4, "Unexpected item count %d.\n", count);
 
     /* Emptying listbox sends a LB_RESETCONTENT to itself. */
-    flush_sequence(sequences, LB_SEQ_INDEX);
+    flush_sequence(LB_SEQ_INDEX);
     for (i = count; i--;)
     {
         res = SendMessageA(hLB, LB_DELETESTRING, 0, 0);
         ok(res == i, "Unexpected return value %d.\n", res);
     }
-    ok_sequence(sequences, LB_SEQ_INDEX, delete_seq, "Emptying listbox", FALSE);
+    ok_sequence(LB_SEQ_INDEX, delete_seq, "Emptying listbox", FALSE);
 
     DestroyWindow(hLB);
 }
@@ -365,7 +363,7 @@ static LRESULT WINAPI main_window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             m.lParam = mis->itemData ? hash_Ly_W((const WCHAR *)mis->itemData) : 0;
         else
             m.lParam = mis->itemData ? hash_Ly((const char *)mis->itemData) : 0;
-        add_message(sequences, PARENT_SEQ_INDEX, &m);
+        add_message(PARENT_SEQ_INDEX, &m);
 
         ok(wParam == mis->CtlID, "got wParam=%08Ix, expected %08x\n", wParam, mis->CtlID);
         ok(mis->CtlType == ODT_LISTBOX, "mi->CtlType = %u\n", mis->CtlType);
@@ -398,7 +396,7 @@ static LRESULT WINAPI main_window_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARA
             m.wParam = cis->itemData1 ? hash_Ly((const char *)cis->itemData1) : 0;
             m.lParam = cis->itemData2 ? hash_Ly((const char *)cis->itemData2) : 0;
         }
-        add_message(sequences, PARENT_SEQ_INDEX, &m);
+        add_message(PARENT_SEQ_INDEX, &m);
         break;
     }
     case WM_DRAWITEM:
@@ -2106,10 +2104,10 @@ static void test_GetListBoxInfo(void)
     parent = create_parent();
     listbox = create_listbox(WS_CHILD | WS_VISIBLE, parent);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = GetListBoxInfo(listbox);
     ok(ret > 0, "got %ld\n", ret);
-    ok_sequence(sequences, LB_SEQ_INDEX, getlistboxinfo_seq, "GetListBoxInfo()", FALSE);
+    ok_sequence(LB_SEQ_INDEX, getlistboxinfo_seq, "GetListBoxInfo()", FALSE);
 
     DestroyWindow(listbox);
     DestroyWindow(parent);
@@ -2499,7 +2497,7 @@ static void test_WM_MEASUREITEM(void)
                               WS_CHILD | LBS_NOTIFY | LBS_OWNERDRAWVARIABLE | LBS_HASSTRINGS | WS_VISIBLE,
                               10, 10, 80, 80, parent, (HMENU)ID_LISTBOX, 0, NULL);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageA(listbox, LB_ADDSTRING, 0, (LPARAM)"item 0");
     ok(ret == 0, "expected 0, got %Id\n", ret);
@@ -2508,7 +2506,7 @@ static void test_WM_MEASUREITEM(void)
     ret = SendMessageA(listbox, LB_ADDSTRING, 0, (LPARAM)"item 2");
     ok(ret == 2, "expected 2, got %Id\n", ret);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, lb_addstring_ownerdraw_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, lb_addstring_ownerdraw_parent_seq,
         "LB_ADDSTRING (LBS_HASSTRINGS, ownerdraw)", FALSE);
     DestroyWindow(listbox);
 
@@ -2517,7 +2515,7 @@ static void test_WM_MEASUREITEM(void)
                               WS_CHILD | LBS_NOTIFY | LBS_OWNERDRAWVARIABLE | LBS_SORT | WS_VISIBLE,
                               10, 10, 80, 80, parent, (HMENU)ID_LISTBOX, 0, NULL);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageA(listbox, LB_ADDSTRING, 0, (LPARAM)"item 0");
     ok(ret == 0, "expected 0, got %Id\n", ret);
@@ -2526,7 +2524,7 @@ static void test_WM_MEASUREITEM(void)
     ret = SendMessageA(listbox, LB_ADDSTRING, 0, (LPARAM)"item 2");
     ok(ret == 2, "expected 2, got %Id\n", ret);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, lb_addstring_sort_parent_seq, "LB_ADDSTRING (LBS_SORT)", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, lb_addstring_sort_parent_seq, "LB_ADDSTRING (LBS_SORT)", FALSE);
     DestroyWindow(listbox);
 
     /* LBS_HASSTRINGS */
@@ -2534,7 +2532,7 @@ static void test_WM_MEASUREITEM(void)
                               WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS | WS_VISIBLE,
                               10, 10, 80, 80, parent, (HMENU)ID_LISTBOX, 0, NULL);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageA(listbox, LB_ADDSTRING, 0, (LPARAM)"item 2");
     ok(ret == 0, "expected 0, got %Id\n", ret);
@@ -2543,7 +2541,7 @@ static void test_WM_MEASUREITEM(void)
     ret = SendMessageA(listbox, LB_ADDSTRING, 0, (LPARAM)"item 1");
     ok(ret == 2, "expected 2, got %Id\n", ret);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "LB_ADDSTRING (LBS_HASSTRINGS)", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "LB_ADDSTRING (LBS_HASSTRINGS)", FALSE);
     DestroyWindow(listbox);
 
     /* LBS_HASSTRINGS, LBS_SORT */
@@ -2551,7 +2549,7 @@ static void test_WM_MEASUREITEM(void)
                               WS_CHILD | LBS_NOTIFY | LBS_HASSTRINGS | LBS_SORT | WS_VISIBLE,
                               10, 10, 80, 80, parent, (HMENU)ID_LISTBOX, 0, NULL);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageA(listbox, LB_ADDSTRING, 0, (LPARAM)"item 2");
     ok(ret == 0, "expected 0, got %Id\n", ret);
@@ -2560,7 +2558,7 @@ static void test_WM_MEASUREITEM(void)
     ret = SendMessageA(listbox, LB_ADDSTRING, 0, (LPARAM)"item 1");
     ok(ret == 1, "expected 1, got %Id\n", ret);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "LB_ADDSTRING (LBS_HASSTRINGS, LBS_SORT)", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "LB_ADDSTRING (LBS_HASSTRINGS, LBS_SORT)", FALSE);
     DestroyWindow(listbox);
 
     DestroyWindow(parent);
@@ -2684,7 +2682,7 @@ START_TEST(listbox)
     if (!load_v6_module(&ctx_cookie, &hCtx))
         return;
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     test_listbox();
     test_item_height();

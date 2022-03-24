@@ -48,8 +48,6 @@ static LRESULT WINAPI trackbar_no_wmpaint_proc(HWND hwnd, UINT message, WPARAM w
     return CallWindowProcA(oldproc, hwnd, message, wParam, lParam);
 }
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCE];
-
 static const struct message empty_seq[] = {
     {0}
 };
@@ -407,7 +405,7 @@ static LRESULT WINAPI parent_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LP
         msg.wParam = wParam;
         msg.lParam = lParam;
         msg.id = 0;
-        add_message(sequences, PARENT_SEQ_INDEX, &msg);
+        add_message(PARENT_SEQ_INDEX, &msg);
     }
 
     defwndproc_counter++;
@@ -453,7 +451,7 @@ static LRESULT WINAPI trackbar_subclass_proc(HWND hwnd, UINT message, WPARAM wPa
     if (defwndproc_counter) msg.flags |= defwinproc;
     msg.wParam = wParam;
     msg.lParam = lParam;
-    add_message(sequences, TRACKBAR_SEQ_INDEX, &msg);
+    add_message(TRACKBAR_SEQ_INDEX, &msg);
 
     defwndproc_counter++;
     ret = CallWindowProcA(oldproc, hwnd, message, wParam, lParam);
@@ -501,7 +499,7 @@ static void test_trackbar_buddy(void)
     hWndTrackbar = create_trackbar(defaultstyle, hWndParent);
     ok(hWndTrackbar != NULL, "Expected non NULL value\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
 
     hWndLeftBuddy = CreateWindowA(STATUSCLASSNAMEA, NULL, 0, 0, 0, 300, 20, NULL, NULL, NULL, NULL);
     ok(hWndLeftBuddy != NULL, "Expected non NULL value\n");
@@ -541,8 +539,8 @@ static void test_trackbar_buddy(void)
         DestroyWindow(hWndRightBuddy);
     }
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, buddy_window_test_seq, "buddy test sequence", TRUE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_buddy_window_test_seq, "parent buddy test seq", TRUE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, buddy_window_test_seq, "buddy test sequence", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_buddy_window_test_seq, "parent buddy test seq", TRUE);
 
     DestroyWindow(hWndTrackbar);
 }
@@ -555,7 +553,7 @@ static void test_line_size(void)
     hWndTrackbar = create_trackbar(defaultstyle, hWndParent);
     ok(hWndTrackbar != NULL, "Expected non NULL value\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
 
     /* test TBM_SETLINESIZE */
     r = SendMessageA(hWndTrackbar, TBM_SETLINESIZE, 0, 10);
@@ -567,8 +565,8 @@ static void test_line_size(void)
     r = SendMessageA(hWndTrackbar, TBM_GETLINESIZE, 0,0);
     expect(4, r);
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, line_size_test_seq, "linesize test sequence", FALSE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "parent line test sequence", FALSE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, line_size_test_seq, "linesize test sequence", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "parent line test sequence", FALSE);
 
     DestroyWindow(hWndTrackbar);
 }
@@ -634,7 +632,7 @@ static void test_page_size(void)
     hWndTrackbar = create_trackbar(defaultstyle, hWndParent);
     ok(hWndTrackbar != NULL, "Failed to create trackbar window.\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
 
     /* test TBM_SETPAGESIZE */
     r = SendMessageA(hWndTrackbar, TBM_SETPAGESIZE, 0, 10);
@@ -646,8 +644,8 @@ static void test_page_size(void)
     r = SendMessageA(hWndTrackbar, TBM_GETPAGESIZE, 0,0);
     expect(20, r);
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, page_size_test_seq, "page size test sequence", FALSE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "parent page size test sequence", FALSE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, page_size_test_seq, "page size test sequence", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "parent page size test sequence", FALSE);
 
     /* check for zero page size */
     r = SendMessageA(hWndTrackbar, TBM_SETPAGESIZE, 0, 0);
@@ -678,7 +676,7 @@ static void test_position(void)
     hWndTrackbar = create_trackbar(defaultstyle, hWndParent);
     ok(hWndTrackbar != NULL, "Expected non NULL value\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
 
     /* test TBM_SETPOS */
     SendMessageA(hWndTrackbar, TBM_SETPOS, TRUE, -1);
@@ -700,8 +698,8 @@ static void test_position(void)
     r = SendMessageA(hWndTrackbar, TBM_GETPOS, 0,0);
     expect(20, r);
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, position_test_seq, "position test sequence", TRUE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_position_test_seq, "parent position test sequence", TRUE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, position_test_seq, "position test sequence", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_position_test_seq, "parent position test sequence", TRUE);
 
     DestroyWindow(hWndTrackbar);
 
@@ -750,7 +748,7 @@ static void test_range(void)
     hWndTrackbar = create_trackbar(defaultstyle, hWndParent);
     ok(hWndTrackbar != NULL, "Expected non NULL value\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
 
     /* test TBM_SETRANGE */
     SendMessageA(hWndTrackbar, TBM_SETRANGE, TRUE, MAKELONG(0, 10));
@@ -807,8 +805,8 @@ static void test_range(void)
     r = SendMessageA(hWndTrackbar, TBM_GETRANGEMIN, 0,0);
     expect(5, r);
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, range_test_seq, "range test sequence", TRUE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_range_test_seq, "parent range test sequence", TRUE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, range_test_seq, "range test sequence", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_range_test_seq, "parent range test sequence", TRUE);
 
     /* TBM_SETRANGE updates thumb visual position (rectangle) if needed */
     r = SendMessageA(hWndTrackbar, TBM_SETRANGE, TRUE, MAKELONG(-10, 0));
@@ -872,7 +870,7 @@ static void test_selection(void)
     SendMessageA(hWndTrackbar, TBM_SETRANGEMIN, FALSE, 5);
     SendMessageA(hWndTrackbar, TBM_SETRANGEMAX, FALSE, 10);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
 
     /* test TBM_SETSEL */
     SendMessageA(hWndTrackbar, TBM_SETSEL, TRUE, MAKELONG(0,10));
@@ -927,8 +925,8 @@ static void test_selection(void)
     r = SendMessageA(hWndTrackbar, TBM_GETSELSTART, 0,0);
     expect(8, r);
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, selection_test_seq, "selection test sequence", TRUE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_selection_test_seq, "parent selection test sequence", TRUE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, selection_test_seq, "selection test sequence", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_selection_test_seq, "parent selection test sequence", TRUE);
 
     DestroyWindow(hWndTrackbar);
 }
@@ -941,7 +939,7 @@ static void test_thumb_length(void)
     hWndTrackbar = create_trackbar(defaultstyle, hWndParent);
     ok(hWndTrackbar != NULL, "Expected non NULL value\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
 
     /* testing TBM_SETTHUMBLENGTH */
     SendMessageA(hWndTrackbar, TBM_SETTHUMBLENGTH, 15, 0);
@@ -964,8 +962,8 @@ static void test_thumb_length(void)
     r = SendMessageA(hWndTrackbar, TBM_GETTHUMBLENGTH, 0,0);
     expect(20, r);
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, thumb_length_test_seq, "thumb length test sequence", TRUE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_thumb_length_test_seq, "parent thumb length test sequence", TRUE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, thumb_length_test_seq, "thumb length test sequence", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_thumb_length_test_seq, "parent thumb length test sequence", TRUE);
 
     DestroyWindow(hWndTrackbar);
 
@@ -1005,7 +1003,7 @@ static void test_tic_settings(void)
     r = SendMessageA(hWndTrackbar, TBM_GETRANGEMIN, 0, 0);
     expect(5, r);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
     r = SendMessageA(hWndTrackbar, TBM_SETTIC, 0, 0);
     ok(r == FALSE, "Expected FALSE, got %d\n", r);
     r = SendMessageA(hWndTrackbar, TBM_SETTIC, 0, 5);
@@ -1033,8 +1031,8 @@ static void test_tic_settings(void)
     r = SendMessageA(hWndTrackbar, TBM_GETNUMTICS, 0, 0);
     expect(2, r);
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, tic_settings_test_seq, "tic settings test sequence", TRUE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_tic_settings_test_seq, "parent tic settings test sequence", TRUE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, tic_settings_test_seq, "tic settings test sequence", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_tic_settings_test_seq, "parent tic settings test sequence", TRUE);
 
     /* range [0,0], freq = 1 */
     SendMessageA(hWndTrackbar, TBM_SETRANGEMAX, TRUE, 0);
@@ -1116,7 +1114,7 @@ static void test_tic_placement(void)
     numtics = SendMessageA(hWndTrackbar, TBM_GETNUMTICS, 0, 0);
     ok(numtics == 6, "Expected 6, got %ld\n", numtics);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
     /* test TBM_GETPTICS */
     rPTics = (DWORD *) SendMessageA(hWndTrackbar, TBM_GETPTICS, 0,0);
     expect(2, rPTics[0]);
@@ -1138,8 +1136,8 @@ static void test_tic_placement(void)
     r = SendMessageA(hWndTrackbar, TBM_GETTICPOS, 2, 0);
     ok(r > 0, "Expected r > 0, got %d\n", r);
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, tic_placement_test_seq, "get tic placement test sequence", FALSE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "parent get tic placement test sequence", FALSE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, tic_placement_test_seq, "get tic placement test sequence", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "parent get tic placement test sequence", FALSE);
 
     DestroyWindow(hWndTrackbar);
 }
@@ -1153,7 +1151,7 @@ static void test_tool_tips(void)
     hWndTrackbar = create_trackbar(defaultstyle, hWndParent);
     ok(hWndTrackbar != NULL, "Expected non NULL value\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
 
     /* testing TBM_SETTIPSIDE */
     r = SendMessageA(hWndTrackbar, TBM_SETTIPSIDE, TBTS_TOP, 0);
@@ -1188,8 +1186,8 @@ static void test_tool_tips(void)
     rTest = (HWND) SendMessageA(hWndTrackbar, TBM_GETTOOLTIPS, 0,0);
     ok(rTest == hWndTooltip, "Expected hWndTooltip\n");
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, tool_tips_test_seq, "tool tips test sequence", FALSE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "parent tool tips test sequence", FALSE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, tool_tips_test_seq, "tool tips test sequence", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "parent tool tips test sequence", FALSE);
 
     DestroyWindow(hWndTrackbar);
 }
@@ -1203,7 +1201,7 @@ static void test_unicode(void)
     hWndTrackbar = create_trackbar(defaultstyle, hWndParent);
     ok(hWndTrackbar != NULL, "Expected non NULL value\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
 
     /* testing TBM_SETUNICODEFORMAT */
     r = SendMessageA(hWndTrackbar, TBM_SETUNICODEFORMAT, TRUE, 0);
@@ -1215,8 +1213,8 @@ static void test_unicode(void)
     r = SendMessageA(hWndTrackbar, TBM_GETUNICODEFORMAT, 0,0);
     ok(r == FALSE, "Expected FALSE, got %d\n",r);
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, unicode_test_seq, "unicode test sequence", FALSE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "parent unicode test sequence", FALSE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, unicode_test_seq, "unicode test sequence", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "parent unicode test sequence", FALSE);
 
     DestroyWindow(hWndTrackbar);
 }
@@ -1229,7 +1227,7 @@ static void test_ignore_selection(void)
     hWndTrackbar = create_trackbar(0, hWndParent);
     ok(hWndTrackbar != NULL, "Expected non NULL value\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
     /* test TBM_SETSEL  ensure that it is ignored */
     SendMessageA(hWndTrackbar, TBM_SETSEL, TRUE, MAKELONG(0,10));
     r = SendMessageA(hWndTrackbar, TBM_GETSELEND, 0,0);
@@ -1264,8 +1262,8 @@ static void test_ignore_selection(void)
     r = SendMessageA(hWndTrackbar, TBM_GETSELSTART, 0,0);
     expect(0, r);
 
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, ignore_selection_test_seq, "ignore selection setting test sequence", FALSE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "parent ignore selection setting test sequence", FALSE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, ignore_selection_test_seq, "ignore selection setting test sequence", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "parent ignore selection setting test sequence", FALSE);
 
     DestroyWindow(hWndTrackbar);
 }
@@ -1351,20 +1349,20 @@ static void test_create(void)
 {
     HWND hWndTrackbar;
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
 
     hWndTrackbar = create_trackbar(defaultstyle, hWndParent);
     ok(hWndTrackbar != NULL, "Expected non NULL value\n");
-    ok_sequence(sequences, TRACKBAR_SEQ_INDEX, empty_seq, "create Trackbar Window", FALSE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_create_trackbar_wnd_seq, "parent trackbar window", TRUE);
+    ok_sequence(TRACKBAR_SEQ_INDEX, empty_seq, "create Trackbar Window", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_create_trackbar_wnd_seq, "parent trackbar window", TRUE);
 
     DestroyWindow(hWndTrackbar);
 
     /* no style bits */
-    flush_sequences(sequences, NUM_MSG_SEQUENCE);
+    flush_sequences(NUM_MSG_SEQUENCE);
     hWndTrackbar = create_trackbar(0, hWndParent);
     ok(hWndTrackbar != NULL, "Expected non NULL value\n");
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_new_window_test_seq, "new trackbar window test sequence", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_new_window_test_seq, "new trackbar window test sequence", TRUE);
     DestroyWindow(hWndTrackbar);
 }
 
@@ -1375,7 +1373,7 @@ START_TEST(trackbar)
 
     LoadLibraryA("comctl32.dll");
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCE);
+    init_msg_sequences(NUM_MSG_SEQUENCE);
 
     /* create parent window */
     hWndParent = create_parent_window();

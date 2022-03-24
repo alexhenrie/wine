@@ -204,8 +204,6 @@ static const struct notify_test_datetime_format
 static BOOL (WINAPI *pInitCommonControlsEx)(const INITCOMMONCONTROLSEX*);
 static BOOL (WINAPI *pSetWindowSubclass)(HWND, SUBCLASSPROC, UINT_PTR, DWORD_PTR);
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 static const struct message set_child_seq[] = {
     { PGM_SETCHILD, sent },
     { WM_WINDOWPOSCHANGING, sent },
@@ -297,7 +295,7 @@ static LRESULT WINAPI parent_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LP
         msg.wParam = wParam;
         msg.lParam = lParam;
         if (message == WM_NOTIFY && lParam) msg.id = ((NMHDR*)lParam)->code;
-        add_message(sequences, PAGER_SEQ_INDEX, &msg);
+        add_message(PAGER_SEQ_INDEX, &msg);
     }
 
     if (message == WM_NOTIFY)
@@ -365,7 +363,7 @@ static LRESULT WINAPI pager_subclass_proc(HWND hwnd, UINT message, WPARAM wParam
     msg.flags = sent|wparam|lparam;
     msg.wParam = wParam;
     msg.lParam = lParam;
-    add_message(sequences, PAGER_SEQ_INDEX, &msg);
+    add_message(PAGER_SEQ_INDEX, &msg);
     return CallWindowProcA(oldproc, hwnd, message, wParam, lParam);
 }
 
@@ -403,7 +401,7 @@ static LRESULT WINAPI child_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
     else
         msg.id = 0;
 
-    add_message(sequences, PAGER_SEQ_INDEX, &msg);
+    add_message(PAGER_SEQ_INDEX, &msg);
 
     defwndproc_counter++;
     ret = DefWindowProcA(hwnd, message, wParam, lParam);
@@ -444,42 +442,42 @@ static void test_pager(void)
     child2_wnd = CreateWindowA("Pager test child class", "button", WS_CHILD | WS_BORDER, 0, 0, 300, 300,
         pager, 0, GetModuleHandleA(0), 0);
 
-    flush_sequences( sequences, NUM_MSG_SEQUENCES );
+    flush_sequences(NUM_MSG_SEQUENCES);
     SendMessageA( pager, PGM_SETCHILD, 0, (LPARAM)child1_wnd );
-    ok_sequence(sequences, PAGER_SEQ_INDEX, set_child_seq, "set child", FALSE);
+    ok_sequence(PAGER_SEQ_INDEX, set_child_seq, "set child", FALSE);
     GetWindowRect( pager, &rect );
     ok( rect.right - rect.left == 100 && rect.bottom - rect.top == 100,
         "pager resized %ldx%ld\n", rect.right - rect.left, rect.bottom - rect.top );
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     SendMessageA(pager, PGM_SETCHILD, 0, (LPARAM)child2_wnd);
-    ok_sequence(sequences, PAGER_SEQ_INDEX, switch_child_seq, "switch to invisible child", FALSE);
+    ok_sequence(PAGER_SEQ_INDEX, switch_child_seq, "switch to invisible child", FALSE);
     GetWindowRect(pager, &rect);
     ok(rect.right - rect.left == 100 && rect.bottom - rect.top == 100,
         "pager resized %ldx%ld\n", rect.right - rect.left, rect.bottom - rect.top);
     ok(!IsWindowVisible(child2_wnd), "Child window 2 is visible\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     SendMessageA(pager, PGM_SETCHILD, 0, (LPARAM)child1_wnd);
-    ok_sequence(sequences, PAGER_SEQ_INDEX, set_child_seq, "switch to visible child", FALSE);
+    ok_sequence(PAGER_SEQ_INDEX, set_child_seq, "switch to visible child", FALSE);
     GetWindowRect(pager, &rect);
     ok(rect.right - rect.left == 100 && rect.bottom - rect.top == 100,
         "pager resized %ldx%ld\n", rect.right - rect.left, rect.bottom - rect.top);
 
-    flush_sequences( sequences, NUM_MSG_SEQUENCES );
+    flush_sequences(NUM_MSG_SEQUENCES);
     SendMessageA( pager, PGM_SETPOS, 0, 10 );
-    ok_sequence(sequences, PAGER_SEQ_INDEX, set_pos_seq, "set pos", TRUE);
+    ok_sequence(PAGER_SEQ_INDEX, set_pos_seq, "set pos", TRUE);
     GetWindowRect( pager, &rect );
     ok( rect.right - rect.left == 100 && rect.bottom - rect.top == 100,
         "pager resized %ldx%ld\n", rect.right - rect.left, rect.bottom - rect.top );
 
-    flush_sequences( sequences, NUM_MSG_SEQUENCES );
+    flush_sequences(NUM_MSG_SEQUENCES);
     SendMessageA( pager, PGM_SETPOS, 0, 10 );
-    ok_sequence(sequences, PAGER_SEQ_INDEX, set_pos_empty_seq, "set pos empty", TRUE);
+    ok_sequence(PAGER_SEQ_INDEX, set_pos_empty_seq, "set pos empty", TRUE);
 
-    flush_sequences( sequences, NUM_MSG_SEQUENCES );
+    flush_sequences(NUM_MSG_SEQUENCES);
     SendMessageA( pager, PGM_SETPOS, 0, 9 );
-    ok_sequence(sequences, PAGER_SEQ_INDEX, set_pos_seq, "set pos", TRUE);
+    ok_sequence(PAGER_SEQ_INDEX, set_pos_seq, "set pos", TRUE);
 
     DestroyWindow( pager );
 
@@ -1308,7 +1306,7 @@ START_TEST(pager)
     iccex.dwICC = ICC_PAGESCROLLER_CLASS;
     pInitCommonControlsEx(&iccex);
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     parent_wnd = create_parent_window();
     ok(parent_wnd != NULL, "Failed to create parent window!\n");

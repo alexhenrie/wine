@@ -35,8 +35,6 @@ enum seq_index
     NUM_MSG_SEQUENCES
 };
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 static void test_create_tooltip(BOOL is_v6)
 {
     HWND parent, hwnd;
@@ -292,7 +290,7 @@ static LRESULT WINAPI parent_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LP
             msg.wParam = wParam;
             msg.lParam = lParam;
             msg.id = hdr->code;
-            add_message(sequences, PARENT_SEQ_INDEX, &msg);
+            add_message(PARENT_SEQ_INDEX, &msg);
         }
 
         switch (hdr->code)
@@ -1206,14 +1204,14 @@ static void test_TTN_SHOW(void)
     /* Make tooltip appear quickly */
     SendMessageA(hwndTip, TTM_SETDELAYTIME, TTDT_INITIAL, MAKELPARAM(1, 0));
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Put cursor inside window, tooltip will appear immediately */
     GetWindowRect(hwnd, &rect);
     SetCursorPos((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2);
     flush_events(200);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, ttn_show_parent_seq, "TTN_SHOW parent seq", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, ttn_show_parent_seq, "TTN_SHOW parent seq", FALSE);
 
     DestroyWindow(hwndTip);
     DestroyWindow(hwnd);
@@ -1224,7 +1222,7 @@ START_TEST(tooltips)
     ULONG_PTR ctx_cookie;
     HANDLE hCtx;
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     LoadLibraryA("comctl32.dll");
 

@@ -70,8 +70,6 @@ static HWND (WINAPI *pCreateUpDownControl)(DWORD, INT, INT, INT, INT,
     HWND, INT, HINSTANCE, HWND, INT, INT, INT);
 static BOOL (WINAPI *pSetWindowSubclass)(HWND, SUBCLASSPROC, UINT_PTR, DWORD_PTR);
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 static const struct message add_updown_with_edit_seq[] = {
     { WM_WINDOWPOSCHANGING, sent },
     { WM_NCCALCSIZE, sent|wparam, TRUE },
@@ -217,7 +215,7 @@ static LRESULT WINAPI parent_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LP
         msg.lParam = lParam;
         if (message == WM_NOTIFY && lParam)
             msg.id = ((NMHDR*)lParam)->code;
-        add_message(sequences, PARENT_SEQ_INDEX, &msg);
+        add_message(PARENT_SEQ_INDEX, &msg);
     }
 
     defwndproc_counter++;
@@ -270,7 +268,7 @@ static LRESULT WINAPI edit_subclass_proc(HWND hwnd, UINT message, WPARAM wParam,
     msg.wParam = wParam;
     msg.lParam = lParam;
     msg.id     = BUDDY_ID;
-    add_message(sequences, EDIT_SEQ_INDEX, &msg);
+    add_message(EDIT_SEQ_INDEX, &msg);
 
     defwndproc_counter++;
     ret = CallWindowProcA(oldproc, hwnd, message, wParam, lParam);
@@ -310,7 +308,7 @@ static LRESULT WINAPI updown_subclass_proc(HWND hwnd, UINT message, WPARAM wPara
     msg.wParam = wParam;
     msg.lParam = lParam;
     msg.id     = UPDOWN_ID;
-    add_message(sequences, UPDOWN_SEQ_INDEX, &msg);
+    add_message(UPDOWN_SEQ_INDEX, &msg);
 
     defwndproc_counter++;
     ret = CallWindowProcA(oldproc, hwnd, message, wParam, lParam);
@@ -350,7 +348,7 @@ static void test_updown_pos(void)
 
     updown = create_updown_control(UDS_ALIGNRIGHT, g_edit);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Set Range from 0 to 100 */
     SendMessageA(updown, UDM_SETRANGE, 0 , MAKELONG(100,0) );
@@ -398,7 +396,7 @@ static void test_updown_pos(void)
     expect(100,LOWORD(r));
     expect(1,HIWORD(r));
 
-    ok_sequence(sequences, UPDOWN_SEQ_INDEX, test_updown_pos_seq , "test updown pos", FALSE);
+    ok_sequence(UPDOWN_SEQ_INDEX, test_updown_pos_seq , "test updown pos", FALSE);
 
     DestroyWindow(updown);
 
@@ -412,12 +410,12 @@ static void test_updown_pos(void)
     {
         UDACCEL accel;
 
-        flush_sequences(sequences, NUM_MSG_SEQUENCES);
+        flush_sequences(NUM_MSG_SEQUENCES);
 
         r = SendMessageA(updown, UDM_SETPOS, 0, 50);
         expect(50,r);
 
-        ok_sequence(sequences, EDIT_SEQ_INDEX, test_updown_pos_nochange_seq,
+        ok_sequence(EDIT_SEQ_INDEX, test_updown_pos_nochange_seq,
                     "test updown pos, no change", FALSE);
 
         SendMessageA(updown, UDM_SETRANGE, 0, MAKELONG(1, 40));
@@ -472,7 +470,7 @@ static void test_updown_pos32(void)
 
     updown = create_updown_control(UDS_ALIGNRIGHT, g_edit);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Set the position to 0 to 1000 */
     SendMessageA(updown, UDM_SETRANGE32, 0 , 1000 );
@@ -534,7 +532,7 @@ static void test_updown_pos32(void)
     expect(1000,r);
     expect(1,high);
 
-    ok_sequence(sequences, UPDOWN_SEQ_INDEX, test_updown_pos32_seq, "test updown pos32", FALSE);
+    ok_sequence(UPDOWN_SEQ_INDEX, test_updown_pos32_seq, "test updown pos32", FALSE);
 
     DestroyWindow(updown);
 
@@ -542,11 +540,11 @@ static void test_updown_pos32(void)
     SetWindowTextA(g_edit, "50");
     updown = create_updown_control(UDS_ALIGNRIGHT | UDS_SETBUDDYINT, g_edit);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     r = SendMessageA(updown, UDM_SETPOS32, 0, 50);
     expect(50,r);
-    ok_sequence(sequences, EDIT_SEQ_INDEX, test_updown_pos_nochange_seq,
+    ok_sequence(EDIT_SEQ_INDEX, test_updown_pos_nochange_seq,
                 "test updown pos, no change", FALSE);
 
     DestroyWindow(updown);
@@ -561,7 +559,7 @@ static void test_updown_buddy(void)
 
     updown = create_updown_control(UDS_ALIGNRIGHT, g_edit);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     buddyReturn = (HWND)SendMessageA(updown, UDM_GETBUDDY, 0 , 0 );
     ok(buddyReturn == g_edit, "Expected edit handle\n");
@@ -572,8 +570,8 @@ static void test_updown_buddy(void)
     buddyReturn = (HWND)SendMessageA(updown, UDM_GETBUDDY, 0 , 0 );
     ok(buddyReturn == g_edit, "Expected edit handle\n");
 
-    ok_sequence(sequences, UPDOWN_SEQ_INDEX, test_updown_buddy_seq, "test updown buddy", TRUE);
-    ok_sequence(sequences, EDIT_SEQ_INDEX, add_updown_with_edit_seq, "test updown buddy_edit", FALSE);
+    ok_sequence(UPDOWN_SEQ_INDEX, test_updown_buddy_seq, "test updown buddy", TRUE);
+    ok_sequence(EDIT_SEQ_INDEX, add_updown_with_edit_seq, "test updown buddy_edit", FALSE);
 
     DestroyWindow(updown);
 
@@ -688,7 +686,7 @@ static void test_updown_base(void)
 
     updown = create_updown_control(UDS_ALIGNRIGHT, g_edit);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     SendMessageA(updown, UDM_SETBASE, 10 , 0);
     r = SendMessageA(updown, UDM_GETBASE, 0 , 0);
@@ -718,7 +716,7 @@ static void test_updown_base(void)
     r = SendMessageA(updown, UDM_GETBASE, 0 , 0);
     expect(10,r);
 
-    ok_sequence(sequences, UPDOWN_SEQ_INDEX, test_updown_base_seq, "test updown base", FALSE);
+    ok_sequence(UPDOWN_SEQ_INDEX, test_updown_base_seq, "test updown base", FALSE);
 
     DestroyWindow(updown);
 
@@ -749,7 +747,7 @@ static void test_updown_unicode(void)
 
     updown = create_updown_control(UDS_ALIGNRIGHT, g_edit);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Set it to ANSI, don't check return as we don't know previous state */
     SendMessageA(updown, UDM_SETUNICODEFORMAT, 0 , 0);
@@ -774,7 +772,7 @@ static void test_updown_unicode(void)
     r = SendMessageA(updown, UDM_GETUNICODEFORMAT, 0 , 0);
     expect(0,r);
 
-    ok_sequence(sequences, UPDOWN_SEQ_INDEX, test_updown_unicode_seq, "test updown unicode", FALSE);
+    ok_sequence(UPDOWN_SEQ_INDEX, test_updown_unicode_seq, "test updown unicode", FALSE);
 
     DestroyWindow(updown);
 }
@@ -785,18 +783,18 @@ static void test_updown_create(void)
     HWND updown;
     RECT r;
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     updown = create_updown_control(UDS_ALIGNRIGHT, g_edit);
     ok(updown != NULL, "Failed to create updown control\n");
-    ok_sequence(sequences, PARENT_SEQ_INDEX, add_updown_to_parent_seq, "add updown control to parent", TRUE);
-    ok_sequence(sequences, EDIT_SEQ_INDEX, add_updown_with_edit_seq, "add updown control with edit", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, add_updown_to_parent_seq, "add updown control to parent", TRUE);
+    ok_sequence(EDIT_SEQ_INDEX, add_updown_with_edit_seq, "add updown control with edit", FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     GetWindowTextA(g_edit, text, MAX_PATH);
     ok(!*text, "Expected empty string\n");
-    ok_sequence(sequences, EDIT_SEQ_INDEX, get_edit_text_seq, "get edit text", FALSE);
+    ok_sequence(EDIT_SEQ_INDEX, get_edit_text_seq, "get edit text", FALSE);
 
     DestroyWindow(updown);
 
@@ -941,7 +939,7 @@ static void test_updown_pos_notifications(void)
     /* test updown control notifications without UDS_HORZ style */
     updown = create_updown_control(UDS_ALIGNRIGHT | UDS_SETBUDDYINT, g_edit);
     SetFocus(updown);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* click on the up-arrow button */
     GetClientRect(updown, &rect);
@@ -952,7 +950,7 @@ static void test_updown_pos_notifications(void)
     result = SendMessageA(updown, WM_LBUTTONUP, 0, MAKELPARAM(x, y));
     expect(result, 0);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, test_updown_pos_notifications_seq,
+    ok_sequence(PARENT_SEQ_INDEX, test_updown_pos_notifications_seq,
                 "test updown to parent notify (vertical)", FALSE);
 
     DestroyWindow(updown);
@@ -960,7 +958,7 @@ static void test_updown_pos_notifications(void)
     /* test updown control notifications with UDS_HORZ style */
     updown = create_updown_control(UDS_ALIGNRIGHT | UDS_SETBUDDYINT | UDS_HORZ, g_edit);
     SetFocus(updown);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* click on the right-arrow button */
     GetClientRect(updown, &rect);
@@ -971,7 +969,7 @@ static void test_updown_pos_notifications(void)
     result = SendMessageA(updown, WM_LBUTTONUP, 0, MAKELPARAM(x, y));
     expect(result, 0);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, test_updown_pos_notifications_horz_seq,
+    ok_sequence(PARENT_SEQ_INDEX, test_updown_pos_notifications_horz_seq,
                 "test updown to parent notify (horizontal)", FALSE);
 
     DestroyWindow(updown);
@@ -1029,7 +1027,7 @@ START_TEST(updown)
 {
     init_functions();
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     parent_wnd = create_parent_window();
     ok(parent_wnd != NULL, "Failed to create parent window!\n");

@@ -640,7 +640,6 @@ static void test_custom_default_button(void)
 #define NUM_MSG_SEQUENCES   1
 #define PROPSHEET_SEQ_INDEX 0
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
 static WNDPROC oldWndProc;
 
 static const struct message property_sheet_seq[] = {
@@ -761,7 +760,7 @@ static void save_message(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, 
         msg.wParam = wParam;
         msg.lParam = lParam;
         msg.id = receiver;
-        add_message(sequences, PROPSHEET_SEQ_INDEX, &msg);
+        add_message(PROPSHEET_SEQ_INDEX, &msg);
     }
 }
 
@@ -802,7 +801,7 @@ static void test_messages(void)
     PROPSHEETHEADERA psh;
     HWND hdlg;
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     memset(&psp, 0, sizeof(psp));
     psp.dwSize = sizeof(psp);
@@ -830,7 +829,7 @@ static void test_messages(void)
 
     ShowWindow(hdlg,SW_NORMAL);
 
-    ok_sequence(sequences, PROPSHEET_SEQ_INDEX, property_sheet_seq, "property sheet with custom window proc", TRUE);
+    ok_sequence(PROPSHEET_SEQ_INDEX, property_sheet_seq, "property sheet with custom window proc", TRUE);
 
     DestroyWindow(hdlg);
 }

@@ -27,6 +27,8 @@
 #define SWP_NOCLIENTSIZE	0x0800
 #define SWP_NOCLIENTMOVE	0x1000
 
+static struct msg_sequence **sequences;
+
 typedef enum
 {
     sent = 0x1,
@@ -61,10 +63,9 @@ struct msg_sequence
     struct message *sequence;
 };
 
-static void add_message(struct msg_sequence **seq, int sequence_index,
-    const struct message *msg)
+static void add_message(int sequence_index, const struct message *msg)
 {
-    struct msg_sequence *msg_seq = seq[sequence_index];
+    struct msg_sequence *msg_seq = sequences[sequence_index];
 
     if (!msg_seq->sequence)
     {
@@ -84,27 +85,26 @@ static void add_message(struct msg_sequence **seq, int sequence_index,
     msg_seq->count++;
 }
 
-static inline void flush_sequence(struct msg_sequence **seg, int sequence_index)
+static inline void flush_sequence(int sequence_index)
 {
-    struct msg_sequence *msg_seq = seg[sequence_index];
+    struct msg_sequence *msg_seq = sequences[sequence_index];
     heap_free(msg_seq->sequence);
     msg_seq->sequence = NULL;
     msg_seq->count = msg_seq->size = 0;
 }
 
-static inline void flush_sequences(struct msg_sequence **seq, int n)
+static inline void flush_sequences(int n)
 {
     int i;
 
     for (i = 0; i < n; i++)
-        flush_sequence(seq, i);
+        flush_sequence(i);
 }
 
-static void dump_sequence( struct msg_sequence **seq, int sequence_index,
-                           const struct message *expected, const char *context,
-                           const char *file, int line )
+static void dump_sequence(int sequence_index, const struct message *expected,
+                          const char *context, const char *file, int line)
 {
-    struct msg_sequence *msg_seq = seq[sequence_index];
+    struct msg_sequence *msg_seq = sequences[sequence_index];
     const struct message *actual, *sequence;
     unsigned int count = 0;
 
@@ -162,17 +162,16 @@ static void dump_sequence( struct msg_sequence **seq, int sequence_index,
     }
 }
 
-static void ok_sequence_(struct msg_sequence **seq, int sequence_index,
-    const struct message *expected_list, const char *context, BOOL todo,
-    const char *file, int line)
+static void ok_sequence_(int sequence_index, const struct message *expected_list,
+                         const char *context, BOOL todo, const char *file, int line)
 {
     static const struct message end_of_sequence = {0, 0, 0, 0};
-    struct msg_sequence *msg_seq = seq[sequence_index];
+    struct msg_sequence *msg_seq = sequences[sequence_index];
     const struct message *expected = expected_list;
     const struct message *actual, *sequence;
     int failcount = 0, dump = 0;
 
-    add_message(seq, sequence_index, &end_of_sequence);
+    add_message(sequence_index, &end_of_sequence);
 
     sequence = msg_seq->sequence;
     actual = sequence;
@@ -378,18 +377,20 @@ static void ok_sequence_(struct msg_sequence **seq, int sequence_index,
     }
 
 done:
-    if (dump) dump_sequence( seq, sequence_index, expected_list, context, file, line );
-    flush_sequence(seq, sequence_index);
+    if (dump) dump_sequence(sequence_index, expected_list, context, file, line);
+    flush_sequence(sequence_index);
 }
 
-#define ok_sequence(seq, index, exp, contx, todo) \
-        ok_sequence_(seq, index, (exp), (contx), (todo), __FILE__, __LINE__)
+#define ok_sequence(index, exp, contx, todo) \
+        ok_sequence_(index, (exp), (contx), (todo), __FILE__, __LINE__)
 
 
-static void init_msg_sequences(struct msg_sequence **seq, int n)
+static void init_msg_sequences(int n)
 {
     int i;
 
+    sequences = heap_alloc(sizeof(*sequences) * n);
+
     for (i = 0; i < n; i++)
-        seq[i] = heap_alloc_zero(sizeof(*seq[i]));
+        sequences[i] = heap_alloc_zero(sizeof(*sequences[i]));
 }

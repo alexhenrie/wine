@@ -45,8 +45,6 @@ enum msg_id
     EDIT_ID,
 };
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 struct edit_notify {
     int en_change, en_maxtext, en_update;
 };
@@ -901,7 +899,7 @@ static LRESULT CALLBACK parent_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, 
         message != WM_CTLCOLOREDIT &&
         message < 0xc000)
     {
-        add_message(sequences, COMBINED_SEQ_INDEX, &msg);
+        add_message(COMBINED_SEQ_INDEX, &msg);
     }
 
     defwndproc_counter++;
@@ -927,7 +925,7 @@ static LRESULT CALLBACK edit_subclass_proc(HWND hwnd, UINT message, WPARAM wPara
     if (message != WM_IME_SETCONTEXT &&
         message != WM_IME_NOTIFY)
     {
-        add_message(sequences, COMBINED_SEQ_INDEX, &msg);
+        add_message(COMBINED_SEQ_INDEX, &msg);
     }
 
     defwndproc_counter++;
@@ -3426,15 +3424,15 @@ static void test_change_focus(void)
     SetCursorPos(400, 400);
 
     SetFocus(parent_wnd);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     SetFocus(hwnd);
     while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
-    ok_sequence(sequences, COMBINED_SEQ_INDEX, setfocus_combined_seq, "Set focus", TRUE);
+    ok_sequence(COMBINED_SEQ_INDEX, setfocus_combined_seq, "Set focus", TRUE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     SetFocus(parent_wnd);
     while (PeekMessageA(&msg, 0, 0, 0, PM_REMOVE)) DispatchMessageA(&msg);
-    ok_sequence(sequences, COMBINED_SEQ_INDEX, killfocus_combined_seq, "Kill focus", TRUE);
+    ok_sequence(COMBINED_SEQ_INDEX, killfocus_combined_seq, "Kill focus", TRUE);
 
     SetCursorPos(orig_pos.x, orig_pos.y);
 
@@ -3450,7 +3448,7 @@ START_TEST(edit)
     if (!load_v6_module(&ctx_cookie, &hCtx))
         return;
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     hinst = GetModuleHandleA(NULL);
     b = register_classes();

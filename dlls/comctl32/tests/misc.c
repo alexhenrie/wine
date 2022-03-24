@@ -50,8 +50,6 @@ enum seq_index
     NUM_MSG_SEQUENCES
 };
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 static char testicon_data[] =
 {
     0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x02, 0x02, 0x00, 0x00, 0x01, 0x00,
@@ -503,7 +501,7 @@ static LRESULT CALLBACK test_wm_themechanged_proc(HWND hwnd, UINT message, WPARA
         msg.flags |= defwinproc;
     msg.wParam = wParam;
     msg.lParam = lParam;
-    add_message(sequences, CHILD_SEQ_INDEX, &msg);
+    add_message(CHILD_SEQ_INDEX, &msg);
 
     if (message == WM_NCDESTROY)
         pRemoveWindowSubclass(hwnd, test_wm_themechanged_proc, 0);
@@ -593,13 +591,13 @@ static void test_WM_THEMECHANGED(void)
     {
         child = create_control(tests[i].class, WS_VISIBLE, parent, (DWORD_PTR)&tests[i]);
         flush_events();
-        flush_sequences(sequences, NUM_MSG_SEQUENCES);
+        flush_sequences(NUM_MSG_SEQUENCES);
 
         SendMessageW(child, WM_THEMECHANGED, 0, 0);
         flush_events();
 
         sprintf(buffer, "Test %d class %s WM_THEMECHANGED", i, tests[i].class);
-        ok_sequence(sequences, CHILD_SEQ_INDEX, tests[i].expected_msg, buffer, tests[i].todo);
+        ok_sequence(CHILD_SEQ_INDEX, tests[i].expected_msg, buffer, tests[i].todo);
         DestroyWindow(child);
     }
 
@@ -620,7 +618,7 @@ static INT_PTR CALLBACK wm_syscolorchange_dlg_proc(HWND hwnd, UINT message, WPAR
     msg.flags = sent | wparam | lparam;
     msg.wParam = wParam;
     msg.lParam = lParam;
-    add_message(sequences, CHILD_SEQ_INDEX, &msg);
+    add_message(CHILD_SEQ_INDEX, &msg);
     return FALSE;
 }
 
@@ -645,10 +643,10 @@ static void test_WM_SYSCOLORCHANGE(void)
     dialog = CreateDialogIndirectParamA(NULL, &temp.tmplate, parent, wm_syscolorchange_dlg_proc, 0);
     ok(!!dialog, "CreateDialogIndirectParamA failed, error %ld\n", GetLastError());
     flush_events();
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     SendMessageW(dialog, WM_SYSCOLORCHANGE, 0, 0);
-    ok_sequence(sequences, CHILD_SEQ_INDEX, wm_syscolorchange_seq, "test dialog WM_SYSCOLORCHANGE", FALSE);
+    ok_sequence(CHILD_SEQ_INDEX, wm_syscolorchange_seq, "test dialog WM_SYSCOLORCHANGE", FALSE);
 
     EndDialog(dialog, 0);
     DestroyWindow(parent);
@@ -801,7 +799,7 @@ static LRESULT WINAPI test_themed_background_proc(HWND hwnd, UINT message, WPARA
     {
         msg.message = message;
         msg.flags = sent;
-        add_message(sequences, PARENT_SEQ_INDEX, &msg);
+        add_message(PARENT_SEQ_INDEX, &msg);
     }
 
     if (message == WM_ERASEBKGND)
@@ -927,10 +925,10 @@ static void test_themed_background(void)
                               0, 0, 50, 50, parent, 0, 0, 0);
         ok(child != NULL, "CreateWindowA failed, error %lu.\n", GetLastError());
         flush_events();
-        flush_sequences(sequences, NUM_MSG_SEQUENCES);
+        flush_sequences(NUM_MSG_SEQUENCES);
 
         RedrawWindow(child, NULL, NULL, RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW | RDW_ERASENOW | RDW_FRAME);
-        ok_sequence(sequences, PARENT_SEQ_INDEX, tests[i].seq, "paint background", tests[i].todo);
+        ok_sequence(PARENT_SEQ_INDEX, tests[i].seq, "paint background", tests[i].todo);
 
         /* For message sequences that contain both DrawThemeParentBackground() messages and
          * WM_CTLCOLOR*, do a color test to check which is really in effect for controls that can be
@@ -997,7 +995,7 @@ START_TEST(misc)
         return;
     if(!init_functions_v6())
         return;
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     test_comctl32_classes(TRUE);
     test_builtin_classes();

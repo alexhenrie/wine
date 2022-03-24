@@ -53,8 +53,6 @@ static inline void expect_hex_(unsigned line, DWORD expected, DWORD got)
 
 static BOOL (WINAPI *pInitCommonControlsEx)(const INITCOMMONCONTROLSEX*);
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 static HWND parent_wnd;
 static BOOL got_MCN_SELECT, got_MCN_SELCHANGE;
 
@@ -524,7 +522,7 @@ static LRESULT WINAPI parent_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LP
         if (defwndproc_counter) msg.flags |= defwinproc;
         msg.wParam = wParam;
         msg.lParam = lParam;
-        add_message(sequences, PARENT_SEQ_INDEX, &msg);
+        add_message(PARENT_SEQ_INDEX, &msg);
     }
 
     if (message == WM_NOTIFY)
@@ -617,7 +615,7 @@ static HWND create_parent_window(void)
     HWND hwnd;
 
     /* flush message sequences, so we can check the new sequence by the end of function */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     if (!register_parent_wnd_class())
         return NULL;
@@ -628,7 +626,7 @@ static HWND create_parent_window(void)
     ok(hwnd != NULL, "failed to create parent wnd\n");
 
     /* check for message sequences */
-    ok_sequence(sequences, PARENT_SEQ_INDEX, create_parent_window_seq, "create parent window", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, create_parent_window_seq, "create parent window", FALSE);
 
     return hwnd;
 }
@@ -645,7 +643,7 @@ static LRESULT WINAPI monthcal_subclass_proc(HWND hwnd, UINT message, WPARAM wPa
     if (defwndproc_counter) msg.flags |= defwinproc;
     msg.wParam = wParam;
     msg.lParam = lParam;
-    add_message(sequences, MONTHCAL_SEQ_INDEX, &msg);
+    add_message(MONTHCAL_SEQ_INDEX, &msg);
 
     /* some debug output for style changing */
     if ((message == WM_STYLECHANGING ||
@@ -777,7 +775,7 @@ static void test_currdate(void)
 
     hwnd = create_monthcal_control(0);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Setter and Getters for current date selected */
     st_original.wYear = 2000;
@@ -839,7 +837,7 @@ static void test_currdate(void)
     res = SendMessageA(hwnd, MCM_GETCURSEL, 0, 0);
     expect(0, res);
 
-    ok_sequence(sequences, MONTHCAL_SEQ_INDEX, monthcal_curr_date_seq, "monthcal currDate", TRUE);
+    ok_sequence(MONTHCAL_SEQ_INDEX, monthcal_curr_date_seq, "monthcal currDate", TRUE);
 
     /* December, 31, 9999 is the maximum allowed date */
     memset(&st_new, 0, sizeof(st_new));
@@ -936,7 +934,7 @@ static void test_firstDay(void)
 
     hwnd = create_monthcal_control(0);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Setter and Getters for first day of week */
     /* check for locale first day */
@@ -964,7 +962,7 @@ static void test_firstDay(void)
             }
         }
 
-        ok_sequence(sequences, MONTHCAL_SEQ_INDEX, monthcal_first_day_seq, "monthcal firstDay", FALSE);
+        ok_sequence(MONTHCAL_SEQ_INDEX, monthcal_first_day_seq, "monthcal firstDay", FALSE);
 
     }else{
         skip("Cannot retrieve first day of the week\n");
@@ -980,7 +978,7 @@ static void test_unicode(void)
 
     hwnd = create_monthcal_control(0);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Setter and Getters for Unicode format */
 
@@ -1011,7 +1009,7 @@ static void test_unicode(void)
     res = SendMessageA(hwnd, MCM_SETUNICODEFORMAT, 1, 0);
     expect(0, res);
 
-    ok_sequence(sequences, MONTHCAL_SEQ_INDEX, monthcal_unicode_seq, "monthcal unicode", FALSE);
+    ok_sequence(MONTHCAL_SEQ_INDEX, monthcal_unicode_seq, "monthcal unicode", FALSE);
 
     DestroyWindow(hwnd);
 }
@@ -1073,7 +1071,7 @@ static void test_hittest(void)
     }
     MoveWindow(hwnd, 0, 0, r.right, r.bottom, FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     st.wYear = 2007;
     st.wMonth = 4;
@@ -1190,7 +1188,7 @@ if (0)
     expect(mchit.uHit, res);
     expect_hex(MCHT_TODAYLINK, res);
 
-    ok_sequence(sequences, MONTHCAL_SEQ_INDEX, monthcal_hit_test_seq, "monthcal hit test", TRUE);
+    ok_sequence(MONTHCAL_SEQ_INDEX, monthcal_hit_test_seq, "monthcal hit test", TRUE);
 
     /* The horizontal position of title bar elements depends on locale (y pos
        is constant), so we sample across a horizontal line and make sure we
@@ -1278,7 +1276,7 @@ static void test_todaylink(void)
     expect(1, res);
     MoveWindow(hwnd, 0, 0, r.right, r.bottom, FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* hit active area - today link */
     mchit.cbSize = MCHITTESTINFO_V1_SIZE;
@@ -1314,7 +1312,7 @@ static void test_todaylink(void)
     expect(1, st_new.wMonth);
     expect(2005, st_new.wYear);
 
-    ok_sequence(sequences, MONTHCAL_SEQ_INDEX, monthcal_todaylink_seq, "monthcal hit test", TRUE);
+    ok_sequence(MONTHCAL_SEQ_INDEX, monthcal_todaylink_seq, "monthcal hit test", TRUE);
 
     DestroyWindow(hwnd);
 }
@@ -1327,7 +1325,7 @@ static void test_today(void)
 
     hwnd = create_monthcal_control(0);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Setter and Getters for "today" information */
 
@@ -1371,7 +1369,7 @@ static void test_today(void)
     expect(0, st_new.wDay);
     expect(0, st_new.wMonth);
 
-    ok_sequence(sequences, MONTHCAL_SEQ_INDEX, monthcal_today_seq, "monthcal today", TRUE);
+    ok_sequence(MONTHCAL_SEQ_INDEX, monthcal_today_seq, "monthcal today", TRUE);
 
     DestroyWindow(hwnd);
 }
@@ -1386,7 +1384,7 @@ static void test_scroll(void)
     res = SendMessageA(hwnd, MCM_GETMONTHDELTA, 0, 0);
     expect(2, res);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Setter and Getters for scroll rate */
     res = SendMessageA(hwnd, MCM_SETMONTHDELTA, 2, 0);
@@ -1412,7 +1410,7 @@ static void test_scroll(void)
     res = SendMessageA(hwnd, MCM_GETMONTHDELTA, 0, 0);
     expect(-5, res);
 
-    ok_sequence(sequences, MONTHCAL_SEQ_INDEX, monthcal_scroll_seq, "monthcal scroll", FALSE);
+    ok_sequence(MONTHCAL_SEQ_INDEX, monthcal_scroll_seq, "monthcal scroll", FALSE);
 
     DestroyWindow(hwnd);
 }
@@ -1449,7 +1447,7 @@ static void test_monthrange(void)
     /* resize control to display two Calendars */
     MoveWindow(hwnd, 0, 0, r.right, (5/2)*r.bottom, FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     res = SendMessageA(hwnd, MCM_GETMONTHRANGE, GMR_VISIBLE, (LPARAM)st_visible);
     expect(2, res);
@@ -1469,7 +1467,7 @@ static void test_monthrange(void)
     expect(1, st_daystate[1].wMonth);
     expect(6, st_daystate[1].wDay);
 
-    ok_sequence(sequences, MONTHCAL_SEQ_INDEX, monthcal_monthrange_seq, "monthcal monthrange", FALSE);
+    ok_sequence(MONTHCAL_SEQ_INDEX, monthcal_monthrange_seq, "monthcal monthrange", FALSE);
 
     /* with null date array parameter */
     res = SendMessageA(hwnd, MCM_GETMONTHRANGE, GMR_VISIBLE, 0);
@@ -1542,7 +1540,7 @@ static void test_maxselday(void)
     res = SendMessageA(hwnd, MCM_GETMAXSELCOUNT, 0, 0);
     expect(7, res);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* Setter and Getters for max selected days */
     res = SendMessageA(hwnd, MCM_SETMAXSELCOUNT, 5, 0);
@@ -1561,7 +1559,7 @@ static void test_maxselday(void)
     res = SendMessageA(hwnd, MCM_GETMAXSELCOUNT, 0, 0);
     expect(15, res);
 
-    ok_sequence(sequences, MONTHCAL_SEQ_INDEX, monthcal_max_sel_day_seq, "monthcal MaxSelDay", FALSE);
+    ok_sequence(MONTHCAL_SEQ_INDEX, monthcal_max_sel_day_seq, "monthcal MaxSelDay", FALSE);
 
     /* zero value is invalid too */
     res = SendMessageA(hwnd, MCM_SETMAXSELCOUNT, 0, 0);
@@ -1612,16 +1610,16 @@ static void test_create(void)
 {
     HWND hwnd;
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     hwnd = create_monthcal_control(0);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, create_monthcal_control_seq, "create monthcal control", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, create_monthcal_control_seq, "create monthcal control", TRUE);
 
     DestroyWindow(hwnd);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     hwnd = create_monthcal_control(MCS_MULTISELECT);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, create_monthcal_multi_sel_style_seq, "create monthcal (multi sel style)", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, create_monthcal_multi_sel_style_seq, "create monthcal (multi sel style)", TRUE);
     DestroyWindow(hwnd);
 }
 
@@ -1630,16 +1628,16 @@ static void test_destroy(void)
     HWND hwnd;
 
     hwnd = create_monthcal_control(0);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     DestroyWindow(hwnd);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, destroy_monthcal_parent_msgs_seq, "Destroy monthcal (parent msg)", FALSE);
-    ok_sequence(sequences, MONTHCAL_SEQ_INDEX, destroy_monthcal_child_msgs_seq, "Destroy monthcal (child msg)", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, destroy_monthcal_parent_msgs_seq, "Destroy monthcal (parent msg)", FALSE);
+    ok_sequence(MONTHCAL_SEQ_INDEX, destroy_monthcal_child_msgs_seq, "Destroy monthcal (child msg)", FALSE);
 
     /* MCS_MULTISELECT */
     hwnd = create_monthcal_control(MCS_MULTISELECT);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     DestroyWindow(hwnd);
-    ok_sequence(sequences, MONTHCAL_SEQ_INDEX, destroy_monthcal_multi_sel_style_seq, "Destroy monthcal (multi sel style)", FALSE);
+    ok_sequence(MONTHCAL_SEQ_INDEX, destroy_monthcal_multi_sel_style_seq, "Destroy monthcal (multi sel style)", FALSE);
 }
 
 static void test_selrange(void)
@@ -2089,7 +2087,7 @@ START_TEST(monthcal)
 
     test_monthcal();
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     parent_wnd = create_parent_window();
 

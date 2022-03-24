@@ -45,8 +45,6 @@ static HRESULT (WINAPI *pTaskDialogIndirect)(const TASKDIALOGCONFIG *, int *, in
 static HRESULT (WINAPI *pTaskDialog)(HWND, HINSTANCE, const WCHAR *, const WCHAR *, const WCHAR *,
         TASKDIALOG_COMMON_BUTTON_FLAGS, const WCHAR *, int *);
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 struct message_info
 {
     UINT message;
@@ -414,12 +412,12 @@ static void run_test_(TASKDIALOGCONFIG *info, int expect_button, int expect_radi
     init_test_message(TDN_DESTROYED, 0, 0, msg++);
 
     current_message_info = test_messages;
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     hr = pTaskDialogIndirect(info, &ret_button, &ret_radio, &ret_verification);
     ok_(file, line)(hr == S_OK, "TaskDialogIndirect() failed, got %#lx.\n", hr);
 
-    ok_sequence_(sequences, TASKDIALOG_SEQ_INDEX, msg_start, context, FALSE, file, line);
+    ok_sequence_(TASKDIALOG_SEQ_INDEX, msg_start, context, FALSE, file, line);
     ok_(file, line)(ret_button == expect_button,
                      "Wrong button. Expected %d, got %d\n", expect_button, ret_button);
     ok_(file, line)(ret_radio == expect_radio_button,
@@ -440,7 +438,7 @@ static HRESULT CALLBACK taskdialog_callback_proc(HWND hwnd, UINT notification,
     ok(test_ref_data == ref_data, "Unexpected ref data %Iu.\n", ref_data);
 
     init_test_message(notification, (short)wParam, lParam, &msg);
-    add_message(sequences, TASKDIALOG_SEQ_INDEX, &msg);
+    add_message(TASKDIALOG_SEQ_INDEX, &msg);
 
     if (notification == TDN_DIALOG_CONSTRUCTED || notification == TDN_DESTROYED) /* Skip implicit messages */
         return S_OK;
@@ -891,7 +889,7 @@ START_TEST(taskdialog)
     ok(pTaskDialogIndirect == ptr_ordinal, "got wrong pointer for ordinal 345, %p expected %p\n",
                                             ptr_ordinal, pTaskDialogIndirect);
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     test_invalid_parameters();
     test_callback();

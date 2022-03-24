@@ -33,8 +33,6 @@
 
 static BOOL (WINAPI *pInitCommonControlsEx)(const INITCOMMONCONTROLSEX*);
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 static const struct message test_dtm_set_format_seq[] = {
     { DTM_SETFORMATA, sent|wparam|lparam, 0, 0 },
     { DTM_SETFORMATA, sent|wparam, 0 },
@@ -148,7 +146,7 @@ static LRESULT WINAPI datetime_subclass_proc(HWND hwnd, UINT message, WPARAM wPa
     if (defwndproc_counter) msg.flags |= defwinproc;
     msg.wParam = wParam;
     msg.lParam = lParam;
-    add_message(sequences, DATETIME_SEQ_INDEX, &msg);
+    add_message(DATETIME_SEQ_INDEX, &msg);
 
     defwndproc_counter++;
     ret = CallWindowProcA(oldproc, hwnd, message, wParam, lParam);
@@ -190,7 +188,7 @@ static void test_dtm_set_format(void)
 
     hWnd = create_datetime_control(DTS_SHOWNONE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     r = SendMessageA(hWnd, DTM_SETFORMATA, 0, 0);
     expect(1, r);
@@ -199,7 +197,7 @@ static void test_dtm_set_format(void)
 		    (LPARAM)"'Today is: 'hh':'m':'s dddd MMM dd', 'yyyy");
     expect(1, r);
 
-    ok_sequence(sequences, DATETIME_SEQ_INDEX, test_dtm_set_format_seq, "test_dtm_set_format", FALSE);
+    ok_sequence(DATETIME_SEQ_INDEX, test_dtm_set_format_seq, "test_dtm_set_format", FALSE);
 
     r = SendMessageA(hWnd, DTM_SETFORMATA, 0, (LPARAM)"'hh' hh");
     expect(1, r);
@@ -239,7 +237,7 @@ static void test_dtm_set_and_get_mccolor(void)
 
     hWnd = create_datetime_control(DTS_SHOWNONE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     test_mccolor_types(hWnd, MCSC_BACKGROUND, "MCSC_BACKGROUND");
     test_mccolor_types(hWnd, MCSC_MONTHBK, "MCSC_MONTHBK");
@@ -248,7 +246,7 @@ static void test_dtm_set_and_get_mccolor(void)
     test_mccolor_types(hWnd, MCSC_TITLETEXT, "MCSC_TITLETEXT");
     test_mccolor_types(hWnd, MCSC_TRAILINGTEXT, "MCSC_TRAILINGTEXT");
 
-    ok_sequence(sequences, DATETIME_SEQ_INDEX, test_dtm_set_and_get_mccolor_seq, "test_dtm_set_and_get_mccolor", FALSE);
+    ok_sequence(DATETIME_SEQ_INDEX, test_dtm_set_and_get_mccolor_seq, "test_dtm_set_and_get_mccolor", FALSE);
 
     DestroyWindow(hWnd);
 }
@@ -260,14 +258,14 @@ static void test_dtm_set_and_get_mcfont(void)
 
     hWnd = create_datetime_control(DTS_SHOWNONE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     hFontOrig = GetStockObject(DEFAULT_GUI_FONT);
     SendMessageA(hWnd, DTM_SETMCFONT, (WPARAM)hFontOrig, TRUE);
     hFontNew = (HFONT)SendMessageA(hWnd, DTM_GETMCFONT, 0, 0);
     ok(hFontOrig == hFontNew, "Expected hFontOrig==hFontNew, hFontOrig=%p, hFontNew=%p\n", hFontOrig, hFontNew);
 
-    ok_sequence(sequences, DATETIME_SEQ_INDEX, test_dtm_set_and_get_mcfont_seq, "test_dtm_set_and_get_mcfont", FALSE);
+    ok_sequence(DATETIME_SEQ_INDEX, test_dtm_set_and_get_mcfont_seq, "test_dtm_set_and_get_mcfont", FALSE);
     DestroyWindow(hWnd);
 }
 
@@ -278,14 +276,14 @@ static void test_dtm_get_monthcal(void)
 
     hWnd = create_datetime_control(DTS_SHOWNONE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     todo_wine {
         r = SendMessageA(hWnd, DTM_GETMONTHCAL, 0, 0);
         ok(r == 0, "Expected NULL(no child month calendar control), got %Id\n", r);
     }
 
-    ok_sequence(sequences, DATETIME_SEQ_INDEX, test_dtm_get_monthcal_seq, "test_dtm_get_monthcal", FALSE);
+    ok_sequence(DATETIME_SEQ_INDEX, test_dtm_get_monthcal_seq, "test_dtm_get_monthcal", FALSE);
     DestroyWindow(hWnd);
 }
 
@@ -338,7 +336,7 @@ static void test_dtm_set_and_get_range(void)
 
     hWnd = create_datetime_control(DTS_SHOWNONE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* initialize st[0] to lowest possible value */
     fill_systime_struct(&st[0], 1601, 1, 0, 1, 0, 0, 0, 0);
@@ -404,7 +402,7 @@ static void test_dtm_set_and_get_range(void)
     expect_systime(&st[0], &getSt[0]);
     expect_systime(&st[1], &getSt[1]);
 
-    ok_sequence(sequences, DATETIME_SEQ_INDEX, test_dtm_set_and_get_range_seq, "test_dtm_set_and_get_range", FALSE);
+    ok_sequence(DATETIME_SEQ_INDEX, test_dtm_set_and_get_range_seq, "test_dtm_set_and_get_range", FALSE);
 
     /* DTM_SETRANGE with 0 flags */
     r = SendMessageA(hWnd, DTM_SETRANGE, 0, (LPARAM)st);
@@ -428,7 +426,7 @@ static void test_dtm_set_range_swap_min_max(void)
     HWND hWnd;
 
     hWnd = create_datetime_control(DTS_SHOWNONE);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     fill_systime_struct(&st[0], 2007, 2, 4, 15, 2, 2, 2, 2);
 
@@ -520,7 +518,7 @@ static void test_dtm_set_range_swap_min_max(void)
     expect_systime(&st[0], &getSt[0]);
     expect_systime(&st[1], &getSt[1]);
 
-    ok_sequence(sequences, DATETIME_SEQ_INDEX, test_dtm_set_range_swap_min_max_seq, "test_dtm_set_range_swap_min_max", FALSE);
+    ok_sequence(DATETIME_SEQ_INDEX, test_dtm_set_range_swap_min_max_seq, "test_dtm_set_range_swap_min_max", FALSE);
 
     DestroyWindow(hWnd);
 }
@@ -539,7 +537,7 @@ static void test_dtm_set_and_get_system_time(void)
     DestroyWindow(hWnd);
 
     hWnd = create_datetime_control(DTS_SHOWNONE);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     r = SendMessageA(hWnd, DTM_SETSYSTEMTIME, GDT_NONE, (LPARAM)&st);
     expect(1, r);
@@ -573,7 +571,7 @@ static void test_dtm_set_and_get_system_time(void)
     r = SendMessageA(hWnd, DTM_SETSYSTEMTIME, GDT_VALID, (LPARAM)&st);
     expect_unsuccess(0, r);
 
-    ok_sequence(sequences, DATETIME_SEQ_INDEX, test_dtm_set_and_get_system_time_seq, "test_dtm_set_and_get_system_time", FALSE);
+    ok_sequence(DATETIME_SEQ_INDEX, test_dtm_set_and_get_system_time_seq, "test_dtm_set_and_get_system_time", FALSE);
 
     /* set to some valid value */
     GetSystemTime(&ref);
@@ -678,7 +676,7 @@ static void test_dtm_set_and_get_systemtime_with_limits(void)
 
     hWnd = create_datetime_control(DTS_SHOWNONE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* set range */
     fill_systime_struct(&st[0], 1980, 1, 3, 23, 14, 34, 37, 465);
@@ -716,7 +714,7 @@ static void test_dtm_set_and_get_systemtime_with_limits(void)
     ok(r == GDT_VALID, "Expected %d, not %d(GDT_NONE) or %d(GDT_ERROR), got %Id\n", GDT_VALID, GDT_NONE, GDT_ERROR, r);
     expect_systime(&refSt, &getSt[0]);
 
-    ok_sequence(sequences, DATETIME_SEQ_INDEX, test_dtm_set_and_get_systime_with_limits, "test_dtm_set_and_get_systime_with_limits", FALSE);
+    ok_sequence(DATETIME_SEQ_INDEX, test_dtm_set_and_get_systime_with_limits, "test_dtm_set_and_get_systime_with_limits", FALSE);
 
     DestroyWindow(hWnd);
 }
@@ -857,7 +855,7 @@ START_TEST(datetime)
     iccex.dwICC  = ICC_DATE_CLASSES;
     pInitCommonControlsEx(&iccex);
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     test_dtm_set_format();
     test_dtm_set_and_get_mccolor();

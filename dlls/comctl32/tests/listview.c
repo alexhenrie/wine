@@ -97,8 +97,6 @@ static void init_functions(void)
 #undef X
 }
 
-static struct msg_sequence *sequences[NUM_MSG_SEQUENCES];
-
 static const struct message create_ownerdrawfixed_parent_seq[] = {
     { WM_NOTIFYFORMAT, sent },
     { WM_QUERYUISTATE, sent|optional }, /* Win2K and higher */
@@ -496,10 +494,10 @@ static LRESULT WINAPI parent_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LP
         message != WM_GETICON &&
         message != WM_DEVICECHANGE)
     {
-        add_message(sequences, PARENT_SEQ_INDEX, &msg);
-        add_message(sequences, COMBINED_SEQ_INDEX, &msg);
+        add_message(PARENT_SEQ_INDEX, &msg);
+        add_message(COMBINED_SEQ_INDEX, &msg);
     }
-    add_message(sequences, PARENT_FULL_SEQ_INDEX, &msg);
+    add_message(PARENT_FULL_SEQ_INDEX, &msg);
 
     switch (message)
     {
@@ -682,8 +680,8 @@ static LRESULT WINAPI listview_subclass_proc(HWND hwnd, UINT message, WPARAM wPa
     msg.wParam = wParam;
     msg.lParam = lParam;
     msg.id = LISTVIEW_ID;
-    add_message(sequences, LISTVIEW_SEQ_INDEX, &msg);
-    add_message(sequences, COMBINED_SEQ_INDEX, &msg);
+    add_message(LISTVIEW_SEQ_INDEX, &msg);
+    add_message(COMBINED_SEQ_INDEX, &msg);
 
     defwndproc_counter++;
     ret = CallWindowProcA(oldproc, hwnd, message, wParam, lParam);
@@ -750,7 +748,7 @@ static LRESULT WINAPI header_subclass_proc(HWND hwnd, UINT message, WPARAM wPara
     msg.wParam = wParam;
     msg.lParam = lParam;
     msg.id = HEADER_ID;
-    add_message(sequences, LISTVIEW_SEQ_INDEX, &msg);
+    add_message(LISTVIEW_SEQ_INDEX, &msg);
 
     defwndproc_counter++;
     ret = CallWindowProcA(oldproc, hwnd, message, wParam, lParam);
@@ -791,7 +789,7 @@ static LRESULT WINAPI editbox_subclass_proc(HWND hwnd, UINT message, WPARAM wPar
         message == WM_MOVE ||
         message == WM_SIZE)
     {
-        add_message(sequences, EDITBOX_SEQ_INDEX, &msg);
+        add_message(EDITBOX_SEQ_INDEX, &msg);
     }
 
     defwndproc_counter++;
@@ -956,16 +954,16 @@ static void test_images(void)
     r = SendMessageA(hwnd, LVM_INSERTITEMA, 0, (LPARAM)&item);
     ok(!r, "Failed to insert item.\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.mask = LVIF_IMAGE;
     r = SendMessageA(hwnd, LVM_GETITEMA, 0, (LPARAM)&item);
     ok(r, "Failed to get item.\n");
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, single_getdispinfo_parent_seq, "get image dispinfo 1", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, single_getdispinfo_parent_seq, "get image dispinfo 1", FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.mask = LVIF_IMAGE;
@@ -973,7 +971,7 @@ static void test_images(void)
     r = SendMessageA(hwnd, LVM_GETITEMA, 0, (LPARAM)&item);
     ok(r, "Failed to get item.\n");
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "get image dispinfo 2", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "get image dispinfo 2", FALSE);
 
     DestroyWindow(hwnd);
 }
@@ -1444,13 +1442,13 @@ static void test_items(void)
     expect(0, r);
     memset (&item, 0, sizeof (item));
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     item.pszText = LPSTR_TEXTCALLBACKA;
     r = SendMessageA(hwnd, LVM_SETITEMTEXTA, 0 , (LPARAM) &item);
     expect(TRUE, r);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, textcallback_set_again_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, textcallback_set_again_parent_seq,
                 "check callback text comparison rule", FALSE);
 
     DestroyWindow(hwnd);
@@ -1516,7 +1514,7 @@ static void test_columns(void)
     rc = SendMessageA(hwnd, LVM_INSERTCOLUMNA, 1, (LPARAM)&column);
     expect(1, rc);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     rc = SendMessageA(hwnd, LVM_GETCOLUMNORDERARRAY, 2, (LPARAM)&order);
     expect(1, rc);
@@ -1526,10 +1524,10 @@ static void test_columns(void)
     rc = SendMessageA(hwnd, LVM_GETCOLUMNORDERARRAY, 0, 0);
     expect(0, rc);
 
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_getorderarray_seq, "get order array", FALSE);
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_getorderarray_seq, "get order array", FALSE);
 
     /* LVM_SETCOLUMNORDERARRAY */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     order[0] = 0;
     order[1] = 1;
@@ -1539,12 +1537,12 @@ static void test_columns(void)
     rc = SendMessageA(hwnd, LVM_SETCOLUMNORDERARRAY, 0, 0);
     expect(0, rc);
 
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_setorderarray_seq, "set order array", FALSE);
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_setorderarray_seq, "set order array", FALSE);
 
     /* after column added subitem is considered as present */
     insert_item(hwnd, 0);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     item.pszText = buff;
     item.cchTextMax = sizeof(buff);
@@ -1556,7 +1554,7 @@ static void test_columns(void)
     expect(1, rc);
     ok(g_itema.iSubItem == 1, "got %d\n", g_itema.iSubItem);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, single_getdispinfo_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, single_getdispinfo_parent_seq,
         "get subitem text after column added", FALSE);
 
     DestroyWindow(hwnd);
@@ -1783,9 +1781,9 @@ static void test_create(BOOL is_version_6)
     DestroyWindow(hList);
 
     /* WM_MEASUREITEM should be sent when created with LVS_OWNERDRAWFIXED */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     hList = create_listview_control(LVS_OWNERDRAWFIXED | LVS_REPORT);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, create_ownerdrawfixed_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, create_ownerdrawfixed_parent_seq,
                 "created with LVS_OWNERDRAWFIXED|LVS_REPORT - parent seq", FALSE);
     DestroyWindow(hList);
 
@@ -1821,13 +1819,13 @@ static void test_redraw(void)
     hwnd = create_listview_control(LVS_REPORT);
     subclass_header(hwnd);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, redraw_listview_seq, "redraw listview", FALSE);
+    ok_sequence(LISTVIEW_SEQ_INDEX, redraw_listview_seq, "redraw listview", FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* forward WM_ERASEBKGND to parent on CLR_NONE background color */
     /* 1. Without backbuffer */
@@ -1836,19 +1834,19 @@ static void test_redraw(void)
 
     hdc = GetWindowDC(hwndparent);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hwnd, WM_ERASEBKGND, (WPARAM)hdc, 0);
     ok(r == 1, "Expected not zero result\n");
-    ok_sequence(sequences, PARENT_FULL_SEQ_INDEX, forward_erasebkgnd_parent_seq,
+    ok_sequence(PARENT_FULL_SEQ_INDEX, forward_erasebkgnd_parent_seq,
                 "forward WM_ERASEBKGND on CLR_NONE", FALSE);
 
     res = SendMessageA(hwnd, LVM_SETBKCOLOR, 0, CLR_DEFAULT);
     expect(TRUE, res);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hwnd, WM_ERASEBKGND, (WPARAM)hdc, 0);
     expect(1, r);
-    ok_sequence(sequences, PARENT_FULL_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_FULL_SEQ_INDEX, empty_seq,
                 "don't forward WM_ERASEBKGND on non-CLR_NONE", FALSE);
 
     /* 2. With backbuffer */
@@ -1857,19 +1855,19 @@ static void test_redraw(void)
     res = SendMessageA(hwnd, LVM_SETBKCOLOR, 0, CLR_NONE);
     expect(TRUE, res);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hwnd, WM_ERASEBKGND, (WPARAM)hdc, 0);
     expect(1, r);
-    ok_sequence(sequences, PARENT_FULL_SEQ_INDEX, forward_erasebkgnd_parent_seq,
+    ok_sequence(PARENT_FULL_SEQ_INDEX, forward_erasebkgnd_parent_seq,
                 "forward WM_ERASEBKGND on CLR_NONE", FALSE);
 
     res = SendMessageA(hwnd, LVM_SETBKCOLOR, 0, CLR_DEFAULT);
     expect(TRUE, res);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hwnd, WM_ERASEBKGND, (WPARAM)hdc, 0);
     todo_wine expect(1, r);
-    ok_sequence(sequences, PARENT_FULL_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_FULL_SEQ_INDEX, empty_seq,
                 "don't forward WM_ERASEBKGND on non-CLR_NONE", FALSE);
 
     ReleaseDC(hwndparent, hdc);
@@ -1902,7 +1900,7 @@ static LRESULT WINAPI cd_wndproc(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
             msg.lParam = lParam;
             msg.id = nmhdr->code;
             msg.stage = nmlvcd->nmcd.dwDrawStage;
-            add_message(sequences, PARENT_CD_SEQ_INDEX, &msg);
+            add_message(PARENT_CD_SEQ_INDEX, &msg);
 
             switch(nmlvcd->nmcd.dwDrawStage) {
             case CDDS_PREPAINT:
@@ -1965,10 +1963,10 @@ static void test_customdraw(void)
     UpdateWindow(hwnd);
 
     /* message tests */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
-    ok_sequence(sequences, PARENT_CD_SEQ_INDEX, parent_report_cd_seq, "parent customdraw, LVS_REPORT", FALSE);
+    ok_sequence(PARENT_CD_SEQ_INDEX, parent_report_cd_seq, "parent customdraw, LVS_REPORT", FALSE);
 
     /* Check colors when item is selected. */
     item.mask = LVIF_STATE;
@@ -1976,17 +1974,17 @@ static void test_customdraw(void)
     item.state = LVIS_SELECTED;
     SendMessageA(hwnd, LVM_SETITEMSTATE, 0, (LPARAM)&item);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
-    ok_sequence(sequences, PARENT_CD_SEQ_INDEX, parent_report_cd_seq,
+    ok_sequence(PARENT_CD_SEQ_INDEX, parent_report_cd_seq,
             "parent customdraw, item selected, LVS_REPORT, selection", FALSE);
 
     SetWindowLongW(hwnd, GWL_STYLE, GetWindowLongW(hwnd, GWL_STYLE) | LVS_SHOWSELALWAYS);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
-    ok_sequence(sequences, PARENT_CD_SEQ_INDEX, parent_report_cd_seq,
+    ok_sequence(PARENT_CD_SEQ_INDEX, parent_report_cd_seq,
             "parent customdraw, item selected, LVS_SHOWSELALWAYS, LVS_REPORT", FALSE);
 
     DestroyWindow(hwnd);
@@ -1997,10 +1995,10 @@ static void test_customdraw(void)
     insert_column(hwnd, 1);
     insert_item(hwnd, 0);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
-    ok_sequence(sequences, PARENT_CD_SEQ_INDEX, parent_list_cd_seq, "parent customdraw, LVS_LIST", FALSE);
+    ok_sequence(PARENT_CD_SEQ_INDEX, parent_list_cd_seq, "parent customdraw, LVS_LIST", FALSE);
 
     SetWindowLongPtrA(hwndparent, GWLP_WNDPROC, (LONG_PTR)oldwndproc);
     DestroyWindow(hwnd);
@@ -2029,7 +2027,7 @@ static void test_icon_spacing(void)
     w = LOWORD(r);
     h = HIWORD(r);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     r = SendMessageA(hwnd, LVM_SETICONSPACING, 0, MAKELPARAM(20, 30));
     ok(r == MAKELONG(w, h) ||
@@ -2042,9 +2040,9 @@ static void test_icon_spacing(void)
     r = SendMessageA(hwnd, LVM_SETICONSPACING, 0, MAKELPARAM(-1,-1));
     expect(MAKELONG(25,35), r);
 
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_icon_spacing_seq, "test icon spacing seq", FALSE);
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_icon_spacing_seq, "test icon spacing seq", FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     DestroyWindow(hwnd);
 }
 
@@ -2061,7 +2059,7 @@ static void test_color(void)
     hwnd = create_listview_control(LVS_REPORT);
     ok(hwnd != NULL, "failed to create a listview window\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     for (i = 0; i < 4; i++)
     {
@@ -2083,8 +2081,8 @@ static void test_color(void)
         expect(color, r);
     }
 
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_color_seq, "test color seq", FALSE);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_color_seq, "test color seq", FALSE);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* invalidation test done separately to avoid a message chain mess */
     r = ValidateRect(hwnd, NULL);
@@ -2155,7 +2153,7 @@ static void test_item_count(void)
     /* 3 items + 1 header + 1 to be sure */
     MoveWindow(hwnd, 0, 0, rect.right - rect.left, 5 * height, FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     r = SendMessageA(hwnd, LVM_GETITEMCOUNT, 0, 0);
     expect(0, r);
@@ -2219,9 +2217,9 @@ static void test_item_count(void)
     r = SendMessageA(hwnd, LVM_GETITEMCOUNT, 0, 0);
     expect(3, r);
 
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_item_count_seq, "test item count seq", FALSE);
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_item_count_seq, "test item count seq", FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     DestroyWindow(hwnd);
 }
 
@@ -2243,7 +2241,7 @@ static void test_item_position(void)
     hwnd = create_listview_control(LVS_ICON);
     ok(hwnd != NULL, "failed to create a listview window\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* [item0] */
     item0.mask = LVIF_TEXT;
@@ -2287,9 +2285,9 @@ static void test_item_position(void)
     expect(TRUE, r);
     expect2(20, 20, position.x, position.y);
 
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_itempos_seq, "test item position seq", TRUE);
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_itempos_seq, "test item position seq", TRUE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     DestroyWindow(hwnd);
 }
 
@@ -2305,38 +2303,38 @@ static void test_getorigin(void)
 
     hwnd = create_listview_control(LVS_ICON);
     ok(hwnd != NULL, "failed to create a listview window\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     r = SendMessageA(hwnd, LVM_GETORIGIN, 0, (LPARAM)&position);
     expect(TRUE, r);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     DestroyWindow(hwnd);
 
     hwnd = create_listview_control(LVS_SMALLICON);
     ok(hwnd != NULL, "failed to create a listview window\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     r = SendMessageA(hwnd, LVM_GETORIGIN, 0, (LPARAM)&position);
     expect(TRUE, r);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     DestroyWindow(hwnd);
 
     hwnd = create_listview_control(LVS_LIST);
     ok(hwnd != NULL, "failed to create a listview window\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     r = SendMessageA(hwnd, LVM_GETORIGIN, 0, (LPARAM)&position);
     expect(FALSE, r);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     DestroyWindow(hwnd);
 
     hwnd = create_listview_control(LVS_REPORT);
     ok(hwnd != NULL, "failed to create a listview window\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     r = SendMessageA(hwnd, LVM_GETORIGIN, 0, (LPARAM)&position);
     expect(FALSE, r);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     DestroyWindow(hwnd);
 }
 
@@ -2466,18 +2464,18 @@ static void test_multiselect(void)
     r = SendMessageA(hwnd, LVM_SETITEMSTATE, -1, (LPARAM)&item);
     ok(r, "got %d\n", r);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     item.stateMask = LVIS_SELECTED;
     item.state     = LVIS_SELECTED;
     r = SendMessageA(hwnd, LVM_SETITEMSTATE, -1, (LPARAM)&item);
     expect(TRUE, r);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, change_all_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, change_all_parent_seq,
                 "select all notification", FALSE);
 
     /* select all again (all selected already) */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&g_nmlistview_changing, 0xcc, sizeof(g_nmlistview_changing));
 
@@ -2490,29 +2488,29 @@ static void test_multiselect(void)
     ok(g_nmlistview_changing.uOldState == LVIS_SELECTED, "got 0x%x\n", g_nmlistview_changing.uOldState);
     ok(g_nmlistview_changing.uChanged == LVIF_STATE, "got 0x%x\n", g_nmlistview_changing.uChanged);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, changing_all_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, changing_all_parent_seq,
                 "select all notification 2", FALSE);
 
     /* deselect all items */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     item.state = 0;
     item.stateMask = LVIS_SELECTED;
     r = SendMessageA(hwnd, LVM_SETITEMSTATE, -1, (LPARAM)&item);
     ok(r, "got %d\n", r);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, change_all_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, change_all_parent_seq,
                 "deselect all notification", FALSE);
 
     /* deselect all items again */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     item.state = 0;
     item.stateMask = LVIS_SELECTED;
     SendMessageA(hwnd, LVM_SETITEMSTATE, -1, (LPARAM)&item);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "deselect all notification 2", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "deselect all notification 2", FALSE);
 
     /* any non-zero state value does the same */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&g_nmlistview_changing, 0xcc, sizeof(g_nmlistview_changing));
 
@@ -2525,7 +2523,7 @@ static void test_multiselect(void)
     ok(g_nmlistview_changing.uOldState == 0, "got 0x%x\n", g_nmlistview_changing.uOldState);
     ok(g_nmlistview_changing.uChanged == LVIF_STATE, "got 0x%x\n", g_nmlistview_changing.uChanged);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, changing_all_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, changing_all_parent_seq,
                 "set state all notification 3", FALSE);
 
     r = SendMessageA(hwnd, LVM_SETSELECTIONMARK, 0, -1);
@@ -2816,7 +2814,7 @@ static void test_subitem_rect(void)
 
     /* test header interaction */
     subclass_header(hwnd);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     SetRect(&rect, LVIR_BOUNDS, 1, 0, 0);
     r = SendMessageA(hwnd, LVM_GETSUBITEMRECT, -1, (LPARAM)&rect);
@@ -2834,7 +2832,7 @@ static void test_subitem_rect(void)
     r = SendMessageA(hwnd, LVM_GETSUBITEMRECT, 20, (LPARAM)&rect);
     expect(1, r);
 
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, getsubitemrect_seq, "LVM_GETSUBITEMRECT negative index", FALSE);
+    ok_sequence(LISTVIEW_SEQ_INDEX, getsubitemrect_seq, "LVM_GETSUBITEMRECT negative index", FALSE);
 
     DestroyWindow(hwnd);
 
@@ -3125,11 +3123,11 @@ static void test_ownerdata(void)
     style = GetWindowLongPtrA(hwnd, GWL_STYLE);
     ok(!(style & LVS_OWNERDATA) && style, "LVS_OWNERDATA isn't expected\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SetWindowLongPtrA(hwnd, GWL_STYLE, style | LVS_OWNERDATA);
     ok(ret == style, "Expected set GWL_STYLE to succeed\n");
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_ownerdata_switchto_seq,
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_ownerdata_switchto_seq,
             "try to switch to LVS_OWNERDATA seq", FALSE);
 
     style = GetWindowLongPtrA(hwnd, GWL_STYLE);
@@ -3142,11 +3140,11 @@ static void test_ownerdata(void)
     style = GetWindowLongPtrA(hwnd, GWL_STYLE);
     ok(style & LVS_OWNERDATA, "LVS_OWNERDATA is expected\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SetWindowLongPtrA(hwnd, GWL_STYLE, style | LVS_OWNERDATA);
     ok(ret == style, "Expected set GWL_STYLE to succeed\n");
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_ownerdata_switchto_seq,
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_ownerdata_switchto_seq,
                 "try to switch to LVS_OWNERDATA seq", FALSE);
     DestroyWindow(hwnd);
 
@@ -3155,11 +3153,11 @@ static void test_ownerdata(void)
     style = GetWindowLongPtrA(hwnd, GWL_STYLE);
     ok(style & LVS_OWNERDATA, "LVS_OWNERDATA is expected\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SetWindowLongPtrA(hwnd, GWL_STYLE, style & ~LVS_OWNERDATA);
     ok(ret == style, "Expected set GWL_STYLE to succeed\n");
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_ownerdata_switchto_seq,
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_ownerdata_switchto_seq,
             "try to switch to LVS_OWNERDATA seq", FALSE);
     style = GetWindowLongPtrA(hwnd, GWL_STYLE);
     ok(style & LVS_OWNERDATA, "LVS_OWNERDATA is expected\n");
@@ -3209,7 +3207,7 @@ static void test_ownerdata(void)
     res = SendMessageA(hwnd, LVM_SETITEMCOUNT, 20, 0);
     expect(1, res);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.stateMask = LVIS_SELECTED;
@@ -3217,10 +3215,10 @@ static void test_ownerdata(void)
     res = SendMessageA(hwnd, LVM_SETITEMSTATE, 0, (LPARAM)&item);
     expect(TRUE, res);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, ownerdata_select_focus_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, ownerdata_select_focus_parent_seq,
                 "ownerdata select notification", TRUE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.stateMask = LVIS_FOCUSED;
@@ -3228,7 +3226,7 @@ static void test_ownerdata(void)
     res = SendMessageA(hwnd, LVM_SETITEMSTATE, 0, (LPARAM)&item);
     expect(TRUE, res);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, ownerdata_select_focus_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, ownerdata_select_focus_parent_seq,
                 "ownerdata focus notification", TRUE);
 
     /* select all, check notifications */
@@ -3237,7 +3235,7 @@ static void test_ownerdata(void)
     res = SendMessageA(hwnd, LVM_SETITEMSTATE, -1, (LPARAM)&item);
     expect(TRUE, res);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     item.stateMask = LVIS_SELECTED;
     item.state     = LVIS_SELECTED;
@@ -3253,11 +3251,11 @@ static void test_ownerdata(void)
     ok(g_nmlistview.ptAction.x == 0 && g_nmlistview.ptAction.y == 0, "got wrong ptAction value\n");
     ok(g_nmlistview.lParam == 0, "got wrong lparam\n");
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, ownerdata_setstate_all_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, ownerdata_setstate_all_parent_seq,
                 "ownerdata select all notification", FALSE);
 
     /* select all again, note that all items are selected already */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     item.stateMask = LVIS_SELECTED;
     item.state     = LVIS_SELECTED;
 
@@ -3272,11 +3270,11 @@ static void test_ownerdata(void)
     ok(g_nmlistview.ptAction.x == 0 && g_nmlistview.ptAction.y == 0, "got wrong ptAction value\n");
     ok(g_nmlistview.lParam == 0, "got wrong lparam\n");
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, ownerdata_setstate_all_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, ownerdata_setstate_all_parent_seq,
                 "ownerdata select all notification", FALSE);
 
     /* deselect all */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     item.stateMask = LVIS_SELECTED;
     item.state     = 0;
 
@@ -3291,25 +3289,25 @@ static void test_ownerdata(void)
     ok(g_nmlistview.ptAction.x == 0 && g_nmlistview.ptAction.y == 0, "got wrong ptAction value\n");
     ok(g_nmlistview.lParam == 0, "got wrong lparam\n");
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, ownerdata_deselect_all_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, ownerdata_deselect_all_parent_seq,
                 "ownerdata deselect all notification", TRUE);
 
     /* nothing selected, deselect all again */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     item.stateMask = LVIS_SELECTED;
     item.state     = 0;
 
     res = SendMessageA(hwnd, LVM_SETITEMSTATE, -1, (LPARAM)&item);
     expect(TRUE, res);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "ownerdata deselect all notification", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "ownerdata deselect all notification", FALSE);
 
     /* select one, then deselect all */
     item.stateMask = LVIS_SELECTED;
     item.state     = LVIS_SELECTED;
     res = SendMessageA(hwnd, LVM_SETITEMSTATE, 0, (LPARAM)&item);
     expect(TRUE, res);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     item.stateMask = LVIS_SELECTED;
     item.state     = 0;
 
@@ -3324,7 +3322,7 @@ static void test_ownerdata(void)
     ok(g_nmlistview.ptAction.x == 0 && g_nmlistview.ptAction.y == 0, "got wrong ptAction value\n");
     ok(g_nmlistview.lParam == 0, "got wrong lparam\n");
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, ownerdata_deselect_all_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, ownerdata_deselect_all_parent_seq,
                 "ownerdata select all notification", TRUE);
 
     /* remove focused, try to focus all */
@@ -3341,14 +3339,14 @@ static void test_ownerdata(void)
     expect(0, res);
 
     /* setting all to focused returns failure value */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     item.stateMask = LVIS_FOCUSED;
     item.state     = LVIS_FOCUSED;
 
     res = SendMessageA(hwnd, LVM_SETITEMSTATE, -1, (LPARAM)&item);
     expect(FALSE, res);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "ownerdata focus all notification", FALSE);
 
     /* focus single item, remove all */
@@ -3356,7 +3354,7 @@ static void test_ownerdata(void)
     item.state     = LVIS_FOCUSED;
     res = SendMessageA(hwnd, LVM_SETITEMSTATE, 0, (LPARAM)&item);
     expect(TRUE, res);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     item.stateMask = LVIS_FOCUSED;
     item.state     = 0;
 
@@ -3371,11 +3369,11 @@ static void test_ownerdata(void)
     ok(g_nmlistview.ptAction.x == 0 && g_nmlistview.ptAction.y == 0, "got wrong ptAction value\n");
     ok(g_nmlistview.lParam == 0, "got wrong lparam\n");
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, ownerdata_defocus_all_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, ownerdata_defocus_all_parent_seq,
                 "ownerdata remove focus all notification", TRUE);
 
     /* set all cut */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     item.stateMask = LVIS_CUT;
     item.state     = LVIS_CUT;
 
@@ -3390,11 +3388,11 @@ static void test_ownerdata(void)
     ok(g_nmlistview.ptAction.x == 0 && g_nmlistview.ptAction.y == 0, "got wrong ptAction value\n");
     ok(g_nmlistview.lParam == 0, "got wrong lparam\n");
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, ownerdata_setstate_all_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, ownerdata_setstate_all_parent_seq,
                 "ownerdata cut all notification", FALSE);
 
     /* all marked cut, try again */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     item.stateMask = LVIS_CUT;
     item.state     = LVIS_CUT;
 
@@ -3409,7 +3407,7 @@ static void test_ownerdata(void)
     ok(g_nmlistview.ptAction.x == 0 && g_nmlistview.ptAction.y == 0, "got wrong ptAction value\n");
     ok(g_nmlistview.lParam == 0, "got wrong lparam\n");
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, ownerdata_setstate_all_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, ownerdata_setstate_all_parent_seq,
                 "ownerdata cut all notification #2", FALSE);
 
     DestroyWindow(hwnd);
@@ -3421,7 +3419,7 @@ static void test_ownerdata(void)
     res = SendMessageA(hwnd, LVM_SETITEMCOUNT, 1, 0);
     expect(1, res);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.stateMask = LVIS_SELECTED;
@@ -3429,14 +3427,14 @@ static void test_ownerdata(void)
     res = SendMessageA(hwnd, LVM_GETITEMA, 0, (LPARAM)&item);
     expect(TRUE, res);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "ownerdata getitem selected state 1", FALSE);
 
     /* non zero callback mask but not we asking for */
     res = SendMessageA(hwnd, LVM_SETCALLBACKMASK, LVIS_OVERLAYMASK, 0);
     expect(TRUE, res);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.stateMask = LVIS_SELECTED;
@@ -3444,11 +3442,11 @@ static void test_ownerdata(void)
     res = SendMessageA(hwnd, LVM_GETITEMA, 0, (LPARAM)&item);
     expect(TRUE, res);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "ownerdata getitem selected state 2", FALSE);
 
     /* LVIS_OVERLAYMASK callback mask, asking for index */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.stateMask = LVIS_OVERLAYMASK;
@@ -3456,7 +3454,7 @@ static void test_ownerdata(void)
     res = SendMessageA(hwnd, LVM_GETITEMA, 0, (LPARAM)&item);
     expect(TRUE, res);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, single_getdispinfo_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, single_getdispinfo_parent_seq,
                 "ownerdata getitem selected state 2", FALSE);
 
     DestroyWindow(hwnd);
@@ -3502,10 +3500,10 @@ static void test_ownerdata(void)
     res = SendMessageA(hwnd, LVM_SETITEMSTATE, 0, (LPARAM)&item);
     expect(TRUE, res);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     res = SendMessageA(hwnd, LVM_SETITEMCOUNT, 0, 0);
     expect(TRUE, res);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "ownerdata setitemcount", FALSE);
 
     res = SendMessageA(hwnd, LVM_GETNEXTITEM, -1, LVNI_FOCUSED);
@@ -3552,12 +3550,12 @@ static void test_norecompute(void)
     item.pszText    = buff;
     item.cchTextMax = ARRAY_SIZE(buff);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     res = SendMessageA(hwnd, LVM_GETITEMA, 0, (LPARAM)&item);
     expect(TRUE, res);
     ok(item.pszText == LPSTR_TEXTCALLBACKA, "Expected (%p), got (%p)\n",
        LPSTR_TEXTCALLBACKA, (VOID*)item.pszText);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "retrieve with LVIF_NORECOMPUTE seq", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "retrieve with LVIF_NORECOMPUTE seq", FALSE);
 
     DestroyWindow(hwnd);
 
@@ -3576,12 +3574,12 @@ static void test_norecompute(void)
     item.iItem = 0;
     item.pszText    = buff;
     item.cchTextMax = ARRAY_SIZE(buff);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     res = SendMessageA(hwnd, LVM_GETITEMA, 0, (LPARAM)&item);
     expect(TRUE, res);
     ok(item.pszText == LPSTR_TEXTCALLBACKA, "Expected (%p), got (%p)\n",
        LPSTR_TEXTCALLBACKA, (VOID*)item.pszText);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "retrieve with LVIF_NORECOMPUTE seq 2", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "retrieve with LVIF_NORECOMPUTE seq 2", FALSE);
 
     DestroyWindow(hwnd);
 }
@@ -3681,27 +3679,27 @@ static void test_setredraw(void)
     expect(TRUE, ret);
     ret = SendMessageA(hwnd, WM_SETREDRAW, FALSE, 0);
     expect(0, ret);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "redraw after WM_SETREDRAW (FALSE)", FALSE);
 
     ret = SendMessageA(hwnd, LVM_SETBKCOLOR, 0, CLR_NONE);
     expect(TRUE, ret);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     InvalidateRect(hwnd, NULL, TRUE);
     UpdateWindow(hwnd);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "redraw after WM_SETREDRAW (FALSE) with CLR_NONE bkgnd", FALSE);
 
     /* message isn't forwarded to header */
     subclass_header(hwnd);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hwnd, WM_SETREDRAW, FALSE, 0);
     expect(0, ret);
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, setredraw_seq,
+    ok_sequence(LISTVIEW_SEQ_INDEX, setredraw_seq,
                 "WM_SETREDRAW: not forwarded to header", FALSE);
 
     DestroyWindow(hwnd);
@@ -3951,22 +3949,22 @@ static void test_getitemposition(void)
     /* LVS_REPORT, single item, no columns added */
     insert_item(hwnd, 0);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     pt.x = pt.y = -1;
     r = SendMessageA(hwnd, LVM_GETITEMPOSITION, 0, (LPARAM)&pt);
     expect(TRUE, r);
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, getitemposition_seq1, "get item position 1", FALSE);
+    ok_sequence(LISTVIEW_SEQ_INDEX, getitemposition_seq1, "get item position 1", FALSE);
 
     /* LVS_REPORT, single item, single column */
     insert_column(hwnd, 0);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     pt.x = pt.y = -1;
     r = SendMessageA(hwnd, LVM_GETITEMPOSITION, 0, (LPARAM)&pt);
     expect(TRUE, r);
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, getitemposition_seq2, "get item position 2", TRUE);
+    ok_sequence(LISTVIEW_SEQ_INDEX, getitemposition_seq2, "get item position 2", TRUE);
 
     SetRectEmpty(&rect);
     r = SendMessageA(header, HDM_GETITEMRECT, 0, (LPARAM)&rect);
@@ -4239,18 +4237,18 @@ static void test_editbox(void)
     expect(0, r);
 
     /* test notifications without edit created */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hwnd, WM_COMMAND, MAKEWPARAM(0, EN_SETFOCUS), (LPARAM)0xdeadbeef);
     expect(0, r);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "edit box WM_COMMAND (EN_SETFOCUS), no edit created", FALSE);
     /* same thing but with valid window */
     hwndedit = CreateWindowA(WC_EDITA, "Test edit", WS_VISIBLE | WS_CHILD, 0, 0, 20,
                 10, hwnd, (HMENU)1, (HINSTANCE)GetWindowLongPtrA(hwnd, GWLP_HINSTANCE), 0);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hwnd, WM_COMMAND, MAKEWPARAM(0, EN_SETFOCUS), (LPARAM)hwndedit);
     expect(0, r);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "edit box WM_COMMAND (EN_SETFOCUS), no edit created #2", FALSE);
     DestroyWindow(hwndedit);
 
@@ -4356,18 +4354,18 @@ static void test_editbox(void)
     /* end edit without saving */
     SetFocus(hwnd);
     hwndedit = (HWND)SendMessageA(hwnd, LVM_EDITLABELA, 0, 0);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hwndedit, WM_KEYDOWN, VK_ESCAPE, 0);
     expect(0, r);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, edit_end_nochange,
+    ok_sequence(PARENT_SEQ_INDEX, edit_end_nochange,
                 "edit box - end edit, no change, escape", TRUE);
     /* end edit with saving */
     SetFocus(hwnd);
     hwndedit = (HWND)SendMessageA(hwnd, LVM_EDITLABELA, 0, 0);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hwndedit, WM_KEYDOWN, VK_RETURN, 0);
     expect(0, r);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, edit_end_nochange,
+    ok_sequence(PARENT_SEQ_INDEX, edit_end_nochange,
                 "edit box - end edit, no change, return", TRUE);
 
     memset(&item, 0, sizeof(item));
@@ -4413,22 +4411,22 @@ static void test_editbox(void)
 
     /* messaging tests */
     SetFocus(hwnd);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     blockEdit = FALSE;
     hwndedit = (HWND)SendMessageA(hwnd, LVM_EDITLABELA, 0, 0);
     ok(IsWindow(hwndedit), "Expected Edit window to be created\n");
     /* testing only sizing messages */
-    ok_sequence(sequences, EDITBOX_SEQ_INDEX, editbox_create_pos,
+    ok_sequence(EDITBOX_SEQ_INDEX, editbox_create_pos,
                 "edit box create - sizing", FALSE);
 
     /* WM_COMMAND with EN_KILLFOCUS isn't forwarded to parent */
     SetFocus(hwnd);
     hwndedit = (HWND)SendMessageA(hwnd, LVM_EDITLABELA, 0, 0);
     ok(IsWindow(hwndedit), "Expected Edit window to be created\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hwnd, WM_COMMAND, MAKEWPARAM(0, EN_KILLFOCUS), (LPARAM)hwndedit);
     expect(0, r);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, edit_end_nochange,
+    ok_sequence(PARENT_SEQ_INDEX, edit_end_nochange,
                 "edit box WM_COMMAND (EN_KILLFOCUS)", TRUE);
 
     DestroyWindow(hwnd);
@@ -4568,18 +4566,18 @@ static void test_indentation(void)
     r = SendMessageA(hwnd, LVM_INSERTITEMA, 0, (LPARAM)&item);
     expect(0, r);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     item.iItem = 0;
     item.mask = LVIF_INDENT;
     r = SendMessageA(hwnd, LVM_GETITEMA, 0, (LPARAM)&item);
     expect(TRUE, r);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, single_getdispinfo_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, single_getdispinfo_parent_seq,
                 "get indent dispinfo", FALSE);
 
     /* Ask for iIndent with invalid subitem. */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.mask = LVIF_INDENT;
@@ -4587,7 +4585,7 @@ static void test_indentation(void)
     r = SendMessageA(hwnd, LVM_GETITEMA, 0, (LPARAM)&item);
     ok(r, "Failed to get item.\n");
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "get indent dispinfo 2", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "get indent dispinfo 2", FALSE);
 
     DestroyWindow(hwnd);
 }
@@ -4659,10 +4657,10 @@ static void test_canceleditlabel(void)
     insert_item(hwnd, 0);
 
     /* try without edit created */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hwnd, LVM_CANCELEDITLABEL, 0, 0);
     expect(TRUE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "cancel edit label without edit", FALSE);
 
     /* cancel without data change */
@@ -4958,22 +4956,22 @@ static void test_scrollnotify(void)
     expect(TRUE, ret);
 
     /* try with dummy call */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hwnd, LVM_SCROLL, 0, 0);
     expect(TRUE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, scroll_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, scroll_parent_seq,
                 "scroll notify 1", TRUE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hwnd, LVM_SCROLL, 1, 0);
     expect(TRUE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, scroll_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, scroll_parent_seq,
                 "scroll notify 2", TRUE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hwnd, LVM_SCROLL, 1, 1);
     expect(TRUE, ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, scroll_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, scroll_parent_seq,
                 "scroll notify 3", TRUE);
 
     DestroyWindow(hwnd);
@@ -5013,9 +5011,9 @@ static void test_LVS_EX_TRANSPARENTBKGND(void)
 
     hdc = GetWindowDC(hwndparent);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     SendMessageA(hwnd, WM_ERASEBKGND, (WPARAM)hdc, 0);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, lvs_ex_transparentbkgnd_seq,
+    ok_sequence(PARENT_SEQ_INDEX, lvs_ex_transparentbkgnd_seq,
                 "LVS_EX_TRANSPARENTBKGND parent", FALSE);
 
     ReleaseDC(hwndparent, hdc);
@@ -5392,15 +5390,15 @@ static void test_hover(void)
     }
 
     /* test WM_MOUSEHOVER forwarding */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hwnd, WM_MOUSEHOVER, 0, 0);
     expect(0, r);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, hover_parent, "NM_HOVER allow test", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, hover_parent, "NM_HOVER allow test", TRUE);
     g_block_hover = TRUE;
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     r = SendMessageA(hwnd, WM_MOUSEHOVER, 0, 0);
     expect(0, r);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, hover_parent, "NM_HOVER block test", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, hover_parent, "NM_HOVER block test", TRUE);
     g_block_hover = FALSE;
 
     r = SendMessageA(hwnd, LVM_SETHOVERTIME, 0, 500);
@@ -5419,25 +5417,25 @@ static void test_destroynotify(void)
     hwnd = create_listview_control(LVS_REPORT);
     ok(hwnd != NULL, "failed to create listview window\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     DestroyWindow(hwnd);
-    ok_sequence(sequences, COMBINED_SEQ_INDEX, listview_destroy, "check destroy order", FALSE);
+    ok_sequence(COMBINED_SEQ_INDEX, listview_destroy, "check destroy order", FALSE);
 
     /* same for ownerdata list */
     hwnd = create_listview_control(LVS_REPORT|LVS_OWNERDATA);
     ok(hwnd != NULL, "failed to create listview window\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     DestroyWindow(hwnd);
-    ok_sequence(sequences, COMBINED_SEQ_INDEX, listview_ownerdata_destroy, "check destroy order, ownerdata", FALSE);
+    ok_sequence(COMBINED_SEQ_INDEX, listview_ownerdata_destroy, "check destroy order, ownerdata", FALSE);
 
     hwnd = create_listview_control(LVS_REPORT|LVS_OWNERDATA);
     ok(hwnd != NULL, "failed to create listview window\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     ret = SendMessageA(hwnd, LVM_DELETEALLITEMS, 0, 0);
     ok(ret == TRUE, "got %d\n", ret);
-    ok_sequence(sequences, COMBINED_SEQ_INDEX, listview_ownerdata_deleteall, "deleteall ownerdata", FALSE);
+    ok_sequence(COMBINED_SEQ_INDEX, listview_ownerdata_deleteall, "deleteall ownerdata", FALSE);
     DestroyWindow(hwnd);
 }
 
@@ -5463,16 +5461,16 @@ static void test_header_notification(void)
     /* check list parent notification after header item changed,
        this test should be placed before header subclassing to avoid
        Listview -> Header messages to be logged */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     col.mask = LVCF_TEXT;
     col.pszText = textA;
     r = SendMessageA(list, LVM_SETCOLUMNA, 0, (LPARAM)&col);
     expect(TRUE, r);
 
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_header_changed_seq,
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_header_changed_seq,
                 "header notify, listview", FALSE);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "header notify, parent", FALSE);
 
     header = subclass_header(list);
@@ -5539,118 +5537,118 @@ static void test_header_notification2(void)
     nmhdr.iButton = 0;
     nmhdr.pitem = &itemW;
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_ITEMCHANGINGW;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
     parent_header_notify_seq[0].id = HDN_ITEMCHANGINGA;
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_header_notify_seq,
+    ok_sequence(PARENT_SEQ_INDEX, parent_header_notify_seq,
                 "header notify, parent", TRUE);
     todo_wine
     ok(nmhdr.hdr.code == HDN_ITEMCHANGINGA, "Expected ANSI notification code\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_ITEMCHANGEDW;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
     parent_header_notify_seq[0].id = HDN_ITEMCHANGEDA;
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_header_notify_seq,
+    ok_sequence(PARENT_SEQ_INDEX, parent_header_notify_seq,
                 "header notify, parent", TRUE);
     todo_wine
     ok(nmhdr.hdr.code == HDN_ITEMCHANGEDA, "Expected ANSI notification code\n");
     /* HDN_ITEMCLICK sets focus to list, which generates messages we don't want to check */
     SetFocus(list);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_ITEMCLICKW;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_header_click_seq,
+    ok_sequence(PARENT_SEQ_INDEX, parent_header_click_seq,
                 "header notify, parent", FALSE);
     ok(nmhdr.hdr.code == HDN_ITEMCLICKA, "Expected ANSI notification code\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_ITEMDBLCLICKW;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "header notify, parent", FALSE);
     ok(nmhdr.hdr.code == HDN_ITEMDBLCLICKW, "Expected Unicode notification code\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_DIVIDERDBLCLICKW;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_header_divider_dclick_seq,
+    ok_sequence(PARENT_SEQ_INDEX, parent_header_divider_dclick_seq,
                 "header notify, parent", TRUE);
     ok(nmhdr.hdr.code == HDN_DIVIDERDBLCLICKA, "Expected ANSI notification code\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_BEGINTRACKW;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "header notify, parent", FALSE);
     ok(nmhdr.hdr.code == HDN_BEGINTRACKW, "Expected Unicode notification code\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_ENDTRACKW;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
     parent_header_notify_seq[0].id = HDN_ENDTRACKA;
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_header_notify_seq,
+    ok_sequence(PARENT_SEQ_INDEX, parent_header_notify_seq,
                 "header notify, parent", FALSE);
     ok(nmhdr.hdr.code == HDN_ENDTRACKA, "Expected ANSI notification code\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_TRACKW;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
     parent_header_notify_seq[0].id = HDN_TRACKA;
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_header_notify_seq,
+    ok_sequence(PARENT_SEQ_INDEX, parent_header_notify_seq,
                 "header notify, parent", FALSE);
     ok(nmhdr.hdr.code == HDN_TRACKA, "Expected ANSI notification code\n");
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_BEGINDRAG;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 1, "got %ld\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "header notify, parent", FALSE);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_ENDDRAG;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
     parent_header_notify_seq[0].id = HDN_ENDDRAG;
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_header_notify_seq,
+    ok_sequence(PARENT_SEQ_INDEX, parent_header_notify_seq,
                 "header notify, parent", FALSE);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_FILTERCHANGE;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
     parent_header_notify_seq[0].id = HDN_FILTERCHANGE;
     parent_header_notify_seq[0].flags |= optional; /* NT4 does not send this message */
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_header_notify_seq,
+    ok_sequence(PARENT_SEQ_INDEX, parent_header_notify_seq,
                 "header notify, parent", FALSE);
     parent_header_notify_seq[0].flags &= ~optional;
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_BEGINFILTEREDIT;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "header notify, parent", FALSE);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_ENDFILTEREDIT;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "header notify, parent", FALSE);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_ITEMSTATEICONCLICK;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "header notify, parent", FALSE);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
     nmhdr.hdr.code = HDN_ITEMKEYDOWN;
     ret = SendMessageW(list, WM_NOTIFY, 0, (LPARAM)&nmhdr);
     ok(ret == 0, "got %ld\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq,
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq,
                 "header notify, parent", FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     DestroyWindow(list);
 }
@@ -5801,28 +5799,28 @@ static void test_imagelists(void)
     ret = SendMessageA(header, HDM_GETIMAGELIST, 0, 0);
     ok(ret == 0, "Expected no imagelist, got %p\n", (HIMAGELIST)ret);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageW(hwnd, LVM_SETIMAGELIST, LVSIL_NORMAL, (LPARAM)himl1);
     ok(ret == 0, "Expected no imagelist, got %p\n", (HIMAGELIST)ret);
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_set_imagelist,
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_set_imagelist,
                 "set normal image list", FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageW(hwnd, LVM_SETIMAGELIST, LVSIL_STATE, (LPARAM)himl2);
     ok(ret == 0, "Expected no imagelist, got %p\n", (HIMAGELIST)ret);
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_set_imagelist,
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_set_imagelist,
                 "set state image list", TRUE);
 
     ret = SendMessageA(header, HDM_GETIMAGELIST, 0, 0);
     ok(ret == 0, "Expected no imagelist, got %p\n", (HIMAGELIST)ret);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageW(hwnd, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)himl3);
     ok(ret == 0, "Expected no imagelist, got %p\n", (HIMAGELIST)ret);
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_header_set_imagelist,
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_header_set_imagelist,
                 "set small image list", FALSE);
 
     ret = SendMessageA(header, HDM_GETIMAGELIST, 0, 0);
@@ -5831,25 +5829,25 @@ static void test_imagelists(void)
 
     hwnd = create_listview_control(WS_VISIBLE | LVS_ICON);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageW(hwnd, LVM_SETIMAGELIST, LVSIL_NORMAL, (LPARAM)himl1);
     ok(ret == 0, "Expected no imagelist, got %p\n", (HIMAGELIST)ret);
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_set_imagelist,
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_set_imagelist,
                 "set normal image list", FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageW(hwnd, LVM_SETIMAGELIST, LVSIL_STATE, (LPARAM)himl2);
     ok(ret == 0, "Expected no imagelist, got %p\n", (HIMAGELIST)ret);
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_set_imagelist,
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_set_imagelist,
                 "set state image list", FALSE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageW(hwnd, LVM_SETIMAGELIST, LVSIL_SMALL, (LPARAM)himl3);
     ok(ret == 0, "Expected no imagelist, got %p\n", (HIMAGELIST)ret);
-    ok_sequence(sequences, LISTVIEW_SEQ_INDEX, listview_set_imagelist,
+    ok_sequence(LISTVIEW_SEQ_INDEX, listview_set_imagelist,
                 "set small image list", FALSE);
 
     header = (HWND)SendMessageA(hwnd, LVM_GETHEADER, 0, 0);
@@ -6017,7 +6015,7 @@ static void test_LVM_INSERTITEM(void)
     {
         hwnd = create_listview_control(LVS_REPORT);
 
-        flush_sequences(sequences, NUM_MSG_SEQUENCES);
+        flush_sequences(NUM_MSG_SEQUENCES);
 
         item.mask = insert_item[i].mask;
         item.state = insert_item[i].state;
@@ -6033,12 +6031,12 @@ static void test_LVM_INSERTITEM(void)
         if ((insert_item[i].mask & LVIF_STATE) && (insert_item[i].state & (LVIS_FOCUSED | LVIS_SELECTED)))
         {
             sprintf(buf, "%d: insert focused", i);
-            ok_sequence(sequences, PARENT_SEQ_INDEX, parent_insert_focused0_seq, buf, FALSE);
+            ok_sequence(PARENT_SEQ_INDEX, parent_insert_focused0_seq, buf, FALSE);
         }
         else
         {
             sprintf(buf, "%d: insert item", i);
-            ok_sequence(sequences, PARENT_SEQ_INDEX, parent_insert_item_seq, buf, FALSE);
+            ok_sequence(PARENT_SEQ_INDEX, parent_insert_item_seq, buf, FALSE);
         }
 
         state = SendMessageA(hwnd, LVM_GETITEMSTATE, 0, LVIS_ALL);
@@ -6060,7 +6058,7 @@ static void test_insertitem(void)
 
     hwnd = create_listview_control(LVS_REPORT);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     /* insert item 0 focused */
     item.mask = LVIF_STATE;
@@ -6070,7 +6068,7 @@ static void test_insertitem(void)
     item.iSubItem = 0;
     ret = SendMessageA(hwnd, LVM_INSERTITEMA, 0, (LPARAM)&item);
     ok(ret == 0, "got %d\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_insert_focused0_seq, "insert focused 0", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_insert_focused0_seq, "insert focused 0", FALSE);
 
     state = SendMessageA(hwnd, LVM_GETITEMSTATE, 0, LVIS_FOCUSED);
     ok(state == LVIS_FOCUSED, "got %x\n", state);
@@ -6083,7 +6081,7 @@ static void test_insertitem(void)
     item.iSubItem = 0;
     ret = SendMessageA(hwnd, LVM_INSERTITEMA, 0, (LPARAM)&item);
     ok(ret == 1, "got %d\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_insert_focused1_seq, "insert focused 1", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_insert_focused1_seq, "insert focused", TRUE);
 
     state = SendMessageA(hwnd, LVM_GETITEMSTATE, 1, LVIS_FOCUSED);
     ok(state == LVIS_FOCUSED, "got %x\n", state);
@@ -6096,7 +6094,7 @@ static void test_insertitem(void)
     item.iSubItem = 0;
     ret = SendMessageA(hwnd, LVM_INSERTITEMA, 0, (LPARAM)&item);
     ok(ret == 2, "got %d\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_insert_item_seq, "insert focused 2", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_insert_item_seq, "insert focused 2", FALSE);
 
     state = SendMessageA(hwnd, LVM_GETITEMSTATE, 1, LVIS_FOCUSED);
     ok(state == LVIS_FOCUSED, "got %x\n", state);
@@ -6110,7 +6108,7 @@ static void test_insertitem(void)
     item.lParam = 0xdeadbeef;
     ret = SendMessageA(hwnd, LVM_INSERTITEMA, 0, (LPARAM)&item);
     ok(ret == 3, "got %d\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_insert_selected_seq, "insert selected", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_insert_selected_seq, "insert selected", FALSE);
 
     /* insert item 4 */
     item.mask = LVIF_PARAM;
@@ -6121,7 +6119,7 @@ static void test_insertitem(void)
     item.lParam = 0xdeadbeef;
     ret = SendMessageA(hwnd, LVM_INSERTITEMA, 0, (LPARAM)&item);
     ok(ret == 4, "got %d\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_insert_item_seq, "insert param", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_insert_item_seq, "insert param", FALSE);
 
     /* insert item 5 */
     item.mask = LVIF_STATE;
@@ -6132,7 +6130,7 @@ static void test_insertitem(void)
     item.lParam = 0xdeadbeef;
     ret = SendMessageA(hwnd, LVM_INSERTITEMA, 0, (LPARAM)&item);
     ok(ret == 5, "got %d\n", ret);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_insert_item_seq, "insert state", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, parent_insert_item_seq, "insert state", FALSE);
 
     DestroyWindow(hwnd);
 }
@@ -6258,7 +6256,7 @@ static void test_callback_mask(void)
     ret = SendMessageA(hwnd, LVM_SETCALLBACKMASK, LVIS_FOCUSED, 0);
     ok(ret, "Failed to set callback mask.\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     item.iSubItem = 1;
@@ -6273,9 +6271,9 @@ static void test_callback_mask(void)
     ret = SendMessageA(hwnd, LVM_GETITEMA, 0, (LPARAM)&item);
     ok(ret, "Failed to get item data.\n");
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "parent seq, callback mask/invalid subitem 1", TRUE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "parent seq, callback mask/invalid subitem 1", TRUE);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     memset(&item, 0, sizeof(item));
     memset(&g_itema, 0, sizeof(g_itema));
@@ -6287,7 +6285,7 @@ static void test_callback_mask(void)
     ok(g_itema.iSubItem == 1, "Unexpected LVN_DISPINFO subitem %d.\n", g_itema.iSubItem);
     ok(g_itema.stateMask == LVIS_FOCUSED, "Unexpected state mask %#x.\n", g_itema.stateMask);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, single_getdispinfo_parent_seq,
+    ok_sequence(PARENT_SEQ_INDEX, single_getdispinfo_parent_seq,
             "parent seq, callback mask/invalid subitem 2", FALSE);
 
     DestroyWindow(hwnd);
@@ -6315,7 +6313,7 @@ static void test_callback_mask(void)
     ret = SendMessageA(hwnd, LVM_SETITEMSTATE, 0, (LPARAM)&item);
     ok(ret, "Failed to set item state.\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageA(hwnd, LVM_GETNEXTITEM, -1, LVNI_FOCUSED);
     todo_wine
@@ -6340,7 +6338,7 @@ static void test_callback_mask(void)
     ret = SendMessageA(hwnd, LVM_GETNEXTITEM, -1, LVNI_FOCUSED);
     ok(ret == -1, "Unexpected focused item, ret %d\n", ret);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "parent seq, owner data/focus 1", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "parent seq, owner data/focus 1", FALSE);
 
     /* LVS_OWNDERDATA, empty mask */
     ret = SendMessageA(hwnd, LVM_SETCALLBACKMASK, 0, 0);
@@ -6360,7 +6358,7 @@ static void test_callback_mask(void)
     ret = SendMessageA(hwnd, LVM_GETSELECTIONMARK, 0, 0);
     ok(ret == 0, "Unexpected selection mark, %d\n", ret);
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageA(hwnd, LVM_GETNEXTITEM, -1, LVNI_FOCUSED);
     ok(ret == 0, "Unexpected focused item, ret %d\n", ret);
@@ -6381,10 +6379,10 @@ static void test_callback_mask(void)
     ret = SendMessageA(hwnd, LVM_GETNEXTITEM, -1, LVNI_FOCUSED);
     ok(ret == -1, "Unexpected focused item, ret %d\n", ret);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, empty_seq, "parent seq, owner data/focus 2", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, empty_seq, "parent seq, owner data/focus 2", FALSE);
 
     /* 2 items, focus on index 0, reduce to 1 item. */
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageA(hwnd, LVM_SETITEMCOUNT, 2, 0);
     ok(ret, "Failed to set item count.\n");
@@ -6401,7 +6399,7 @@ static void test_callback_mask(void)
     ret = SendMessageA(hwnd, LVM_GETNEXTITEM, -1, LVNI_FOCUSED);
     ok(ret == 0, "Unexpected focused item, ret %d\n", ret);
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, parent_focus_change_ownerdata_seq,
+    ok_sequence(PARENT_SEQ_INDEX, parent_focus_change_ownerdata_seq,
         "parent seq, owner data/focus 3", TRUE);
 
     DestroyWindow(hwnd);
@@ -6585,10 +6583,10 @@ static void test_LVN_ENDLABELEDIT(void)
     ret = SendMessageA(hwndedit, WM_SETTEXT, 0, (LPARAM)"test");
     ok(ret, "Failed to set edit text.\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     ret = SendMessageA(hwndedit, WM_KEYDOWN, VK_RETURN, 0);
-    ok_sequence(sequences, PARENT_SEQ_INDEX, listview_end_label_edit, "Label edit", FALSE);
+    ok_sequence(PARENT_SEQ_INDEX, listview_end_label_edit, "Label edit", FALSE);
 
     /* Test editing with kill focus */
     SetFocus(hwnd);
@@ -6598,17 +6596,17 @@ static void test_LVN_ENDLABELEDIT(void)
     ret = SendMessageA(hwndedit, WM_SETTEXT, 0, (LPARAM)"test2");
     ok(ret, "Failed to set edit text.\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     g_WM_KILLFOCUS_on_LVN_ENDLABELEDIT = TRUE;
     ret = SendMessageA(hwndedit, WM_KEYDOWN, VK_RETURN, 0);
     g_WM_KILLFOCUS_on_LVN_ENDLABELEDIT = FALSE;
 
-    ok_sequence(sequences, PARENT_SEQ_INDEX, listview_end_label_edit_kill_focus,
+    ok_sequence(PARENT_SEQ_INDEX, listview_end_label_edit_kill_focus,
             "Label edit, kill focus", FALSE);
     ok(GetFocus() == hwnd, "Unexpected focused window.\n");
 
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     DestroyWindow(hwnd);
 }
@@ -6837,10 +6835,10 @@ START_TEST(listview)
 
     init_functions();
 
-    init_msg_sequences(sequences, NUM_MSG_SEQUENCES);
+    init_msg_sequences(NUM_MSG_SEQUENCES);
 
     hwndparent = create_parent_window(FALSE);
-    flush_sequences(sequences, NUM_MSG_SEQUENCES);
+    flush_sequences(NUM_MSG_SEQUENCES);
 
     test_header_notification();
     test_header_notification2();
