@@ -1230,6 +1230,8 @@ static Picture get_tile_pict( enum wxr_format wxr_format, const XRenderColor *co
         XRenderColor current_color;
     } tiles[WXR_NB_FORMATS], *tile;
 
+    if (wxr_format == WXR_INVALID_FORMAT) return 0;
+
     tile = &tiles[wxr_format];
 
     if(!tile->xpm)
