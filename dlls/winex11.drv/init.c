@@ -164,6 +164,9 @@ static INT CDECL X11DRV_GetDeviceCaps( PHYSDEV dev, INT cap )
     {
     case SIZEPALETTE:
         return palette_size;
+    case BITSPIXEL:
+        if (fake_8bpp) return 8;
+        /* fall through */
     default:
         dev = GET_NEXT_PHYSDEV( dev, pGetDeviceCaps );
         return dev->funcs->pGetDeviceCaps( dev, cap );
