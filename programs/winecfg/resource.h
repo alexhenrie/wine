@@ -125,6 +125,7 @@
 #define IDC_ENABLE_MANAGED              1100
 #define IDC_ENABLE_DECORATED            1101
 #define IDC_FULLSCREEN_GRAB             1102
+#define IDC_ENABLE_FAKE_8BPP            1103
 
 #define IDC_RES_TRACKBAR                1107
 #define IDC_RES_DPIEDIT                 1108

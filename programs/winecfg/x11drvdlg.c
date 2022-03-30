@@ -160,6 +160,13 @@ static void init_dialog(HWND dialog)
 	CheckDlgButton(dialog, IDC_ENABLE_DECORATED, BST_UNCHECKED);
     HeapFree(GetProcessHeap(), 0, buf);
 
+    buf = get_reg_key(config_key, keypath(L"X11 Driver"), L"Fake8bpp", L"Y");
+    if (IS_OPTION_TRUE(*buf))
+	CheckDlgButton(dialog, IDC_ENABLE_FAKE_8BPP, BST_CHECKED);
+    else
+	CheckDlgButton(dialog, IDC_ENABLE_FAKE_8BPP, BST_UNCHECKED);
+    HeapFree(GetProcessHeap(), 0, buf);
+
     updating_ui = FALSE;
 }
 
@@ -217,6 +224,16 @@ static void on_enable_decorated_clicked(HWND dialog) {
         set_reg_key(config_key, keypath(L"X11 Driver"), L"Decorated", L"Y");
     } else {
         set_reg_key(config_key, keypath(L"X11 Driver"), L"Decorated", L"N");
+    }
+}
+
+static void on_enable_fake_8bpp_clicked(HWND dialog) {
+    WINE_TRACE("\n");
+
+    if (IsDlgButtonChecked(dialog, IDC_FAKE_8BPP) == BST_CHECKED) {
+        set_reg_key(config_key, keypath(L"X11 Driver"), L"Fake8bpp", L"Y");
+    } else {
+        set_reg_key(config_key, keypath(L"X11 Driver"), L"Fake8bpp", L"N");
     }
 }
 
@@ -383,6 +400,7 @@ GraphDlgProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			case IDC_ENABLE_DESKTOP: on_enable_desktop_clicked(hDlg); break;
                         case IDC_ENABLE_MANAGED: on_enable_managed_clicked(hDlg); break;
                         case IDC_ENABLE_DECORATED: on_enable_decorated_clicked(hDlg); break;
+                        case IDC_ENABLE_FAKE_8BPP: on_enable_fake_8bpp_clicked(hDlg); break;
 			case IDC_FULLSCREEN_GRAB:  on_fullscreen_grab_clicked(hDlg); break;
 		    }
 		    break;
