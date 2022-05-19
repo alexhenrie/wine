@@ -23,7 +23,7 @@
  *   functionality
  * - Todo: Handle CommonGroupFlag
  *         Better AddItem Tests (Lots of parameters to test)
- *         Tests for Invalid Characters in Names / Invalid Parameters
+ *         Tests for invalid parameters
  */
 
 #include <stdio.h>
@@ -425,6 +425,321 @@ static void test_request_groups(DWORD instance, HCONV hconv)
     FindClose(hfind);
 }
 
+static BOOL is_unsanitary(char c)
+{
+    return (c > 0 && c < ' ') || strchr("*/:<>?\\|", c) != NULL;
+}
+
+static void sanitize_name(const char *original_name, char *sanitized_name, BOOL group)
+{
+    BOOL at_end = TRUE;
+    int i;
+
+    i = strlen(original_name);
+    sanitized_name[i] = 0;
+
+    while (--i >= 0)
+    {
+        if (is_unsanitary(original_name[i]))
+        {
+            /* replaced in all positions */
+            sanitized_name[i] = '_';
+            at_end = FALSE;
+        }
+        else if (original_name[i] == '.' || (original_name[i] == ' ' && group))
+        {
+            /* left alone if in the middle of the string, dropped if at the end of the string */
+            sanitized_name[i] = at_end ? '\0' : original_name[i];
+        }
+        else
+        {
+            /* left alone in all positions */
+            sanitized_name[i] = original_name[i];
+            at_end = FALSE;
+        }
+    }
+}
+
+static void test_name_sanitization(DWORD instance, HCONV hConv)
+{
+    static const char test_chars[] = "\x01\x1F !#$%&'*+,-./:;<=>?@[\\]^`{|}~\x7F\x80\xFF";
+    char original_name[16], sanitized_icon_name[16], sanitized_group_name[16];
+    char buf[64];
+    UINT error;
+    int i;
+    char c;
+
+    if (0) /* the directory isn't deleted on windows < 7 */
+    {
+        error = dde_execute(instance, hConv, "[CreateGroup(\" \")]");
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        ok(check_exists(" "), "directory not created\n");
+        ok(!check_window_exists(" "), "window should not exist\n");
+
+        error = dde_execute(instance, hConv, "[DeleteGroup(\" \")]");
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        ok(!check_exists(" "), "directory should not exist\n");
+    }
+
+    if (GetUserDefaultUILanguage() == MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT))
+    {
+        error = dde_execute(instance, hConv, "[CreateGroup(\"\")]");
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        todo_wine ok(check_window_exists("Programs") || broken(TRUE) /* 2003 */, "window not created\n");
+
+        error = dde_execute(instance, hConv, "[CreateGroup(\".\")]");
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        ok(!check_window_exists("Programs"), "window should not exist\n");
+
+        error = dde_execute(instance, hConv, "[CreateGroup(\"..\")]");
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        todo_wine ok(check_window_exists("Start Menu") || broken(TRUE) /* 2003 */, "window not created\n");
+
+        error = dde_execute(instance, hConv, "[CreateGroup(\"...\")]");
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        todo_wine ok(check_window_exists("Programs") || broken(TRUE) /* XP */, "window not created\n");
+
+        error = dde_execute(instance, hConv, "[CreateGroup(\"....\")]");
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        ok(!check_window_exists("Programs"), "window should not exist\n");
+    }
+    else
+    {
+        skip("Directory names are probably not in English\n");
+    }
+
+    if (0) /* these calls will actually delete the start menu */
+    {
+        error = dde_execute(instance, hConv, "[DeleteGroup(\"\")]");
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        ok(!check_exists("../Programs"), "directory should not exist\n");
+
+        error = dde_execute(instance, hConv, "[DeleteGroup(\"..\")]");
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        ok(!check_exists("../../Start Menu"), "directory should not exist\n");
+    }
+
+    error = dde_execute(instance, hConv, "[CreateGroup(Group3)]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    ok(check_exists("Group3"), "directory not created\n");
+    ok(check_window_exists("Group3"), "window not created\n");
+
+    error = dde_execute(instance, hConv, "[AddItem(notepad,\"\")]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    ok(check_exists("Group3/notepad.lnk"), "link not created\n");
+
+    error = dde_execute(instance, hConv, "[DeleteItem(notepad)]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    ok(!check_exists("Group3/notepad.lnk"), "link should not exist\n");
+
+    error = dde_execute(instance, hConv, "[AddItem(notepad,\" \")]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    ok(check_exists("Group3/ .lnk"), "link not created\n");
+
+    error = dde_execute(instance, hConv, "[DeleteItem(\" \")]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    ok(!check_exists("Group3/ .lnk"), "link should not exist\n");
+
+    error = dde_execute(instance, hConv, "[AddItem(notepad,\".\")]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    todo_wine ok(check_exists("Group3.lnk"), "link not created\n");
+
+    error = dde_execute(instance, hConv, "[DeleteItem(\".\")]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    ok(!check_exists("Group3.lnk"), "link should not exist\n");
+
+    error = dde_execute(instance, hConv, "[AddItem(notepad,\"..\")]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    ok(check_exists("../Programs.lnk"), "link not created\n");
+
+    error = dde_execute(instance, hConv, "[DeleteItem(\"..\")]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    ok(!check_exists("../Programs.lnk"), "link should not exist\n");
+
+    error = dde_execute(instance, hConv, "[AddItem(notepad,\"...\")]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    todo_wine ok(check_exists("Group3/.lnk") || broken(TRUE) /* XP */, "link not created\n");
+
+    error = dde_execute(instance, hConv, "[DeleteItem(\"...\")]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    ok(!check_exists("Group3/.lnk"), "link should not exist\n");
+
+    error = dde_execute(instance, hConv, "[AddItem(notepad,\"....\")]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    todo_wine ok(check_exists("Group3/.lnk") || broken(TRUE) /* XP */, "link not created\n");
+
+    error = dde_execute(instance, hConv, "[DeleteItem(\"....\")]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    ok(!check_exists("Group3/.lnk"), "link should not exist\n");
+
+    /* Test sanitary group name with unsanitary icon names */
+
+    for (i = 0; i < sizeof(test_chars) - 1; i++)
+    {
+        c = test_chars[i];
+        winetest_push_context("char %d '%c'", c, c);
+
+        sprintf(original_name, "%03d_%c_.%c", c, c, c);
+        sanitize_name(original_name, sanitized_icon_name, FALSE);
+
+        sprintf(buf, "[AddItem(notepad,\"Notepad%s\")]", original_name);
+        error = dde_execute(instance, hConv, buf);
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        sprintf(buf, "Group3/Notepad%s.lnk", sanitized_icon_name);
+        todo_wine_if(c == '.') ok(check_exists(buf) || broken(c == '.') /* XP */, "link not created\n");
+        if (!check_exists(buf))
+        {
+            winetest_pop_context();
+            continue;
+        }
+
+        if (is_unsanitary(c))
+        {
+            sprintf(buf, "[ReplaceItem(\"Notepad%s\")]", original_name);
+            error = dde_execute(instance, hConv, buf);
+            ok(error == DMLERR_NOTPROCESSED, "expected DMLERR_NOTPROCESSED, got %#x\n", error);
+            sprintf(buf, "Group3/Notepad%s.lnk", sanitized_icon_name);
+            ok(check_exists(buf), "link should still exist\n");
+
+            sprintf(buf, "[DeleteItem(\"Notepad%s\")]", original_name);
+            error = dde_execute(instance, hConv, buf);
+            ok(error == DMLERR_NOTPROCESSED, "expected DMLERR_NOTPROCESSED, got %#x\n", error);
+            sprintf(buf, "Group3/Notepad%s.lnk", sanitized_icon_name);
+            ok(check_exists(buf), "link should still exist\n");
+        }
+        else
+        {
+            sprintf(buf, "[ReplaceItem(\"Notepad%s\")]", original_name);
+            error = dde_execute(instance, hConv, buf);
+            ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+            sprintf(buf, "Group3/Notepad%s.lnk", sanitized_icon_name);
+            ok(!check_exists(buf), "link should not exist\n");
+
+            sprintf(buf, "[AddItem(notepad,\"Notepad%s\")]", original_name);
+            error = dde_execute(instance, hConv, buf);
+            ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+            sprintf(buf, "Group3/Notepad%s.lnk", sanitized_icon_name);
+            ok(check_exists(buf), "link not created\n");
+
+            sprintf(buf, "[DeleteItem(\"Notepad%s\")]", original_name);
+            error = dde_execute(instance, hConv, buf);
+            ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+            sprintf(buf, "Group3/Notepad%s.lnk", sanitized_icon_name);
+            ok(!check_exists(buf), "link should not exist\n");
+        }
+
+        winetest_pop_context();
+    }
+
+    error = dde_execute(instance, hConv, "[DeleteGroup(Group3)]");
+    ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+    ok(!check_exists("Group3"), "directory should not exist\n");
+
+    for (i = 0; i < sizeof(test_chars) - 1; i++)
+    {
+        c = test_chars[i];
+        winetest_push_context("char %d '%c'", c, c);
+
+        sprintf(original_name, "%03d_%c_.%c", c, c, c);
+        sanitize_name(original_name, sanitized_group_name, TRUE);
+        sanitize_name(original_name, sanitized_icon_name, FALSE);
+
+        sprintf(buf, "[CreateGroup(\"Group%s\")]", original_name);
+        error = dde_execute(instance, hConv, buf);
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        sprintf(buf, "Group%s", sanitized_group_name);
+        ok(check_exists(buf), "directory not created\n");
+        ok(check_window_exists(buf) || broken(c == ' ') /* vista */, "window not created\n");
+
+        sprintf(buf, "[ShowGroup(\"Group%s\", 0)]", original_name);
+        error = dde_execute(instance, hConv, buf);
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        sprintf(buf, "Group%s", sanitized_group_name);
+        ok(check_window_exists(buf) || broken(c == ' ') /* vista */, "window not created\n");
+
+        /* Test unsanitary group name with sanitary icon name */
+
+        error = dde_execute(instance, hConv, "[AddItem(notepad,Notepad)]");
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        sprintf(buf, "Group%s/Notepad.lnk", sanitized_group_name);
+        if (c == ' ')
+        {
+            /* Although no error is reported, no icon is created if the group name ends in a space */
+            ok(!check_exists(buf), "link should not exist\n");
+            goto delete_group;
+        }
+        todo_wine_if(c == '.') ok(check_exists(buf), "link not created\n");
+
+        error = dde_execute(instance, hConv, "[ReplaceItem(Notepad)]");
+        todo_wine_if(c == '.') ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        sprintf(buf, "Group%s/Notepad.lnk", sanitized_group_name);
+        ok(!check_exists(buf), "link should not exist\n");
+
+        error = dde_execute(instance, hConv, "[AddItem(notepad,Notepad)]");
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        sprintf(buf, "Group%s/Notepad.lnk", sanitized_group_name);
+        todo_wine_if(c == '.') ok(check_exists(buf), "link not created\n");
+
+        error = dde_execute(instance, hConv, "[DeleteItem(Notepad)]");
+        todo_wine_if(c == '.') ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        sprintf(buf, "Group%s/Notepad.lnk", sanitized_group_name);
+        ok(!check_exists(buf), "link should not exist\n");
+
+        /* Test unsanitary group name with unsanitary icon name */
+
+        sprintf(buf, "[AddItem(notepad,\"Notepad%s\")]", original_name);
+        error = dde_execute(instance, hConv, buf);
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        sprintf(buf, "Group%s/Notepad%s.lnk", sanitized_group_name, sanitized_icon_name);
+        todo_wine_if(c == '.') ok(check_exists(buf) || broken(c == '.') /* XP */, "link not created\n");
+        if (!check_exists(buf)) goto delete_group;
+
+        if (is_unsanitary(c))
+        {
+            sprintf(buf, "[ReplaceItem(\"Notepad%s\")]", original_name);
+            error = dde_execute(instance, hConv, buf);
+            ok(error == DMLERR_NOTPROCESSED, "expected DMLERR_NOTPROCESSED, got %#x\n", error);
+            sprintf(buf, "Group%s/Notepad%s.lnk", sanitized_group_name, sanitized_icon_name);
+            ok(check_exists(buf), "link should still exist\n");
+
+            sprintf(buf, "[DeleteItem(\"Notepad%s\")]", original_name);
+            error = dde_execute(instance, hConv, buf);
+            ok(error == DMLERR_NOTPROCESSED, "expected DMLERR_NOTPROCESSED, got %#x\n", error);
+            sprintf(buf, "Group%s/Notepad%s.lnk", sanitized_group_name, sanitized_icon_name);
+            ok(check_exists(buf), "link should still exist\n");
+        }
+        else
+        {
+            sprintf(buf, "[ReplaceItem(\"Notepad%s\")]", original_name);
+            error = dde_execute(instance, hConv, buf);
+            ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+            sprintf(buf, "Group%s/Notepad%s.lnk", sanitized_group_name, sanitized_icon_name);
+            ok(!check_exists(buf), "link should not exist\n");
+
+            sprintf(buf, "[AddItem(notepad,\"Notepad%s\")]", original_name);
+            error = dde_execute(instance, hConv, buf);
+            ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+            sprintf(buf, "Group%s/Notepad%s.lnk", sanitized_group_name, sanitized_icon_name);
+            ok(check_exists(buf), "link not created\n");
+
+            sprintf(buf, "[DeleteItem(\"Notepad%s\")]", original_name);
+            error = dde_execute(instance, hConv, buf);
+            ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+            sprintf(buf, "Group%s/Notepad%s.lnk", sanitized_group_name, sanitized_icon_name);
+            ok(!check_exists(buf), "link should not exist\n");
+        }
+
+delete_group:
+        sprintf(buf, "[DeleteGroup(\"Group%s\")]", original_name);
+        error = dde_execute(instance, hConv, buf);
+        ok(error == DMLERR_NO_ERROR, "expected DMLERR_NO_ERROR, got %#x\n", error);
+        sprintf(buf, "Group%s", sanitized_group_name);
+        ok(!check_exists(buf), "directory should not exist\n");
+
+        winetest_pop_context();
+    }
+}
+
 START_TEST(progman_dde)
 {
     DWORD instance = 0;
@@ -479,6 +794,7 @@ START_TEST(progman_dde)
 
     /* Run Tests */
     test_progman_dde2(instance, hConv);
+    test_name_sanitization(instance, hConv);
 
     /* Cleanup & Exit */
     ret = DdeDisconnect(hConv);

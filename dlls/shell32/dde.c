@@ -78,20 +78,46 @@ static inline BOOL Dde_OnWildConnect(HSZ hszTopic, HSZ hszService)
     return FALSE;
 }
 
+static WCHAR *combine_path(const WCHAR *directory, const WCHAR *name, const WCHAR *extension, BOOL sanitize)
+{
+    WCHAR *path;
+    int len, i;
+
+    len = wcslen(directory) + 1 + wcslen(name);
+    if (extension) len += wcslen(extension);
+    path = heap_alloc((len + 1) * sizeof(WCHAR));
+
+    if (sanitize)
+    {
+        WCHAR *sanitized_name = wcsdup(name);
+
+        for (i = 0; i < wcslen(name); i++)
+        {
+            if (name[i] < ' ' || wcschr(L"*/:<>?\\|", name[i]))
+                sanitized_name[i] = '_';
+        }
+
+        PathCombineW(path, directory, sanitized_name);
+        heap_free(sanitized_name);
+    }
+    else
+    {
+        PathCombineW(path, directory, name);
+    }
+
+    if (extension)
+        wcscat(path, extension);
+
+    return path;
+}
+
 /* Returned string must be freed by caller */
-static WCHAR *get_programs_path(const WCHAR *name)
+static WCHAR *get_programs_path(const WCHAR *name, BOOL sanitize)
 {
     WCHAR *programs, *path;
-    int len;
 
     SHGetKnownFolderPath(&FOLDERID_Programs, 0, NULL, &programs);
-
-    len = lstrlenW(programs) + 1 + lstrlenW(name);
-    path = heap_alloc((len + 1) * sizeof(*path));
-    lstrcpyW(path, programs);
-    lstrcatW(path, L"/");
-    lstrcatW(path, name);
-
+    path = combine_path(programs, name, NULL, sanitize);
     CoTaskMemFree(programs);
 
     return path;
@@ -111,7 +137,7 @@ static inline HDDEDATA Dde_OnRequest(UINT uFmt, HCONV hconv, HSZ hszTopic,
         HDDEDATA ret;
 
         groups_data[0] = 0;
-        programs = get_programs_path(L"*");
+        programs = get_programs_path(L"*", FALSE);
         hfind = FindFirstFileW(programs, &finddata);
         if (hfind)
         {
@@ -162,10 +188,10 @@ static DWORD PROGMAN_OnExecute(WCHAR *command, int argc, WCHAR **argv)
 
         if (argc < 1) return DDE_FNOTPROCESSED;
 
-        path = get_programs_path(argv[0]);
+        path = get_programs_path(argv[0], TRUE);
 
-        CreateDirectoryW(path, NULL);
-        ShellExecuteW(NULL, NULL, path, NULL, NULL, SW_SHOWNORMAL);
+        if (CreateDirectoryW(path, NULL))
+            ShellExecuteW(NULL, NULL, path, NULL, NULL, SW_SHOWNORMAL);
 
         heap_free(last_group);
         last_group = path;
@@ -178,7 +204,7 @@ static DWORD PROGMAN_OnExecute(WCHAR *command, int argc, WCHAR **argv)
 
         if (argc < 1) return DDE_FNOTPROCESSED;
 
-        path = get_programs_path(argv[0]);
+        path = get_programs_path(argv[0], TRUE);
 
         path2 = heap_alloc((lstrlenW(path) + 2) * sizeof(*path));
         lstrcpyW(path2, path);
@@ -203,7 +229,7 @@ static DWORD PROGMAN_OnExecute(WCHAR *command, int argc, WCHAR **argv)
          * ignore its actual value. */
         if (argc < 2) return DDE_FNOTPROCESSED;
 
-        path = get_programs_path(argv[0]);
+        path = get_programs_path(argv[0], TRUE);
 
         ShellExecuteW(NULL, NULL, path, NULL, NULL, SW_SHOWNORMAL);
 
@@ -250,26 +276,21 @@ static DWORD PROGMAN_OnExecute(WCHAR *command, int argc, WCHAR **argv)
             IShellLinkW_Release(link);
             return DDE_FNOTPROCESSED;
         }
-        if (argc >= 2)
+        if (argc >= 2 && argv[1][0])
         {
-            len = lstrlenW(last_group) + 1 + lstrlenW(argv[1]) + 5;
-            name = heap_alloc(len * sizeof(*name));
-            swprintf( name, len, L"%s/%s.lnk", last_group, argv[1] );
+            name = combine_path(last_group, argv[1], L".lnk", TRUE);
         }
         else
         {
-            const WCHAR *filename = PathFindFileNameW(argv[0]);
-            len = PathFindExtensionW(filename) - filename;
-            name = heap_alloc((lstrlenW(last_group) + 1 + len + 5) * sizeof(*name));
-            swprintf( name, lstrlenW(last_group) + 1 + len + 5, L"%s/%.*s.lnk", last_group, len, filename );
+            WCHAR *filename = PathFindFileNameW(argv[0]);
+            *PathFindExtensionW(filename) = '\0';
+            name = combine_path(last_group, filename, L".lnk", TRUE);
         }
-        hres = IPersistFile_Save(file, name, TRUE);
+        IPersistFile_Save(file, name, TRUE);
 
         heap_free(name);
         IPersistFile_Release(file);
         IShellLinkW_Release(link);
-
-        if (FAILED(hres)) return DDE_FNOTPROCESSED;
     }
     else if (!wcsicmp(command, L"DeleteItem") || !wcsicmp(command, L"ReplaceItem"))
     {
@@ -278,12 +299,8 @@ static DWORD PROGMAN_OnExecute(WCHAR *command, int argc, WCHAR **argv)
 
         if (argc < 1) return DDE_FNOTPROCESSED;
 
-        len = lstrlenW(last_group) + 1 + lstrlenW(argv[0]) + 5;
-        name = heap_alloc(len * sizeof(*name));
-        swprintf( name, len, L"%s/%s.lnk", last_group, argv[0]);
-
+        name = combine_path(last_group, argv[0], L".lnk", FALSE);
         ret = DeleteFileW(name);
-
         heap_free(name);
 
         if (!ret) return DDE_FNOTPROCESSED;
